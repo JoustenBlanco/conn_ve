@@ -23,3 +23,9 @@ plugins {
 }
 
 include(":app")
+
+if (!System.getProperty("os.name").toLowerCase().contains("mac")) {
+    println("⏭️  Ignorando plugin sign_in_with_apple en Android")
+} else {
+    include(":sign_in_with_apple")
+}
