@@ -1,8 +1,9 @@
+import 'package:conn_ve/pages/login_register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'features/auth/screens/login_screen.dart';
-import 'features/home/screens/home_screen.dart';
-
+import 'pages/home_page.dart';
+import 'services/auth_service.dart';
+import 'dart:async';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -31,7 +32,8 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// Este widget escucha el estado de sesión y redirige al login o al home
+
+
 class SessionRedirector extends StatefulWidget {
   const SessionRedirector({super.key});
 
@@ -40,41 +42,56 @@ class SessionRedirector extends StatefulWidget {
 }
 
 class _SessionRedirectorState extends State<SessionRedirector> {
-  late final Stream<AuthState> _authSubscription;
+  late final StreamSubscription<AuthState> _authSubscription;
 
   @override
   void initState() {
     super.initState();
-
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange;
-
-    _authSubscription.listen((data) {
+print("Estamos en el SessionRedirector");
+    // Escuchar cambios de sesión
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       final session = data.session;
-
+      print("Escuchando cambios de sesión: $session");
       if (session != null) {
-        // Usuario autenticado, redirigir al home
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
+        await Future.delayed(Duration(seconds: 1)); 
+        print('Sesión activa, redirigiendo al home o crear perfil');
+        final hasProfile = await userHasProfile();
+        if (!mounted) return;
+        if (hasProfile) {
+          print('Ya había un perfil en authSubscription, redirigiendo al home');
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+        } else {
+          print('No había un perfil en authSubscription, cerrando sesión y redirigiendo al login/registro');
+          await Supabase.instance.client.auth.signOut();
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginRegisterPage()));
+        }
+      } else {
+        print('No hay sesión activa en authSubscription, redirigiendo al login');
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginRegisterPage()));
       }
     });
 
-    // Ver si ya había una sesión activa
+    // Chequear si ya había una sesión activa al inicio
     final currentSession = Supabase.instance.client.auth.currentSession;
+    print("Chequear si ya había una sesión activa al inicio: Sesión actual: $currentSession");
     if (currentSession != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
+      print('Ya había una sesión activa al inicio');
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final hasProfile = await userHasProfile();
+        if (!mounted) return;
+        if (hasProfile) {
+          print('Ya había un perfil, redirigiendo al home');
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+        } else {
+          print('No había un perfil, cerrando sesión y redirigiendo al login/registro');
+          await Supabase.instance.client.auth.signOut();
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginRegisterPage()));
+        }
       });
     } else {
+      print('No hay sesión activa en el currentSession, redirigiendo al login');
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginPage()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginRegisterPage()));
       });
     }
   }
