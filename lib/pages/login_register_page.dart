@@ -16,84 +16,112 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
   final passwordController = TextEditingController();
   final nombreController = TextEditingController();
   bool loading = false;
+  final confirmPasswordController = TextEditingController();
+  String? confirmPasswordError;
 
   Future<void> handleLoginOrRegister() async {
-  final email = emailController.text.trim();
-  final password = passwordController.text.trim();
-  final nombre = nombreController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+    final nombre = nombreController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
 
-  // Validación de campos vacíos
-  if (email.isEmpty || password.isEmpty || (!isLogin && nombre.isEmpty)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Por favor, complete todos los campos.')),
-    );
-    return;
-  }
-
-  // Validación de formato de email
-  final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]');
-  if (!emailRegex.hasMatch(email)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ingrese un correo electrónico válido.')),
-    );
-    return;
-  }
-
-  setState(() => loading = true);
-
-  try {
-    if (isLogin) {
-      // Login
-      final res = await Supabase.instance.client.auth.signInWithPassword(
-        email: email,
-        password: password,
+    // Validación de campos vacíos
+    if (email.isEmpty ||
+        password.isEmpty ||
+        (!isLogin && nombre.isEmpty) ||
+        (!isLogin && confirmPassword.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, complete todos los campos.')),
       );
-      if (res.user == null) {
-        throw Exception('Usuario o contraseña incorrectos.');
-      }
-    } else {
-      // Registro
-      final res = await Supabase.instance.client.auth.signUp(
-        email: email,
-        password: password,
+      setState(() {
+        confirmPasswordError = null;
+      });
+      return;
+    }
+
+    // Validación de formato de email
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]');
+    if (!emailRegex.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingrese un correo electrónico válido.')),
       );
-      // Si ocurre un error, Supabase lanzará una excepción y saltará al catch.
-      final userId = res.user?.id;
-      if (userId != null) {
-        await Supabase.instance.client.from('usuarios').insert({
-          'id': userId,
-          'nombre': nombre,
-          'correo': email,
-        });
-      }
+      setState(() {
+        confirmPasswordError = null;
+      });
+      return;
     }
-    // Limpiar campos después de éxito
-    emailController.clear();
-    passwordController.clear();
-    nombreController.clear();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const HomePage()),
-    );
-  } on AuthException catch (e) {
-    // Errores específicos de autenticación
-    String message = 'Ocurrió un error de autenticación.';
-    if (e.message.contains('Invalid login credentials')) {
-      message = 'Usuario o contraseña incorrectos.';
-    } else if (e.message.contains('already registered')) {
-      message = 'El correo ya está registrado.';
+
+    // Validación de confirmación de contraseña
+    if (!isLogin && password != confirmPassword) {
+      setState(() {
+        confirmPasswordError = 'Las contraseñas no coinciden';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Las contraseñas no coinciden.')),
+      );
+      return;
     } else {
-      message = e.message;
+      setState(() {
+        confirmPasswordError = null;
+      });
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  } catch (e) {
-    // Otros errores
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: ${e.toString()}')),
-    );
-  } finally {
+
+    setState(() => loading = true);
+
+    try {
+      if (isLogin) {
+        // Login
+        final res = await Supabase.instance.client.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+        if (res.user == null) {
+          throw Exception('Usuario o contraseña incorrectos.');
+        }
+      } else {
+        // Registro
+        final res = await Supabase.instance.client.auth.signUp(
+          email: email,
+          password: password,
+        );
+        // Si ocurre un error, Supabase lanzará una excepción y saltará al catch.
+        final userId = res.user?.id;
+        if (userId != null) {
+          await Supabase.instance.client.from('usuarios').insert({
+            'id': userId,
+            'nombre': nombre,
+            'correo': email,
+          });
+        }
+      }
+      // Limpiar campos después de éxito
+      emailController.clear();
+      passwordController.clear();
+      nombreController.clear();
+      confirmPasswordController.clear();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } on AuthException catch (e) {
+      // Errores específicos de autenticación
+      String message = 'Ocurrió un error de autenticación.';
+      if (e.message.contains('Invalid login credentials')) {
+        message = 'Usuario o contraseña incorrectos.';
+      } else if (e.message.contains('already registered')) {
+        message = 'El correo ya está registrado.';
+      } else {
+        message = e.message;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      // Otros errores
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: [${e.toString()}')));
+    } finally {
       setState(() => loading = false);
     }
   }
@@ -149,7 +177,11 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       ),
                     ),
                     padding: const EdgeInsets.all(18),
-                    child: Icon(Icons.electric_car_rounded, color: Colors.white, size: 48),
+                    child: Icon(
+                      Icons.electric_car_rounded,
+                      color: Colors.white,
+                      size: 48,
+                    ),
                   ),
                   Text(
                     isLogin ? '¡Bienvenido de nuevo!' : 'Crea tu cuenta',
@@ -162,7 +194,9 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    isLogin ? 'Inicia sesión para continuar' : 'Regístrate para empezar',
+                    isLogin
+                        ? 'Inicia sesión para continuar'
+                        : 'Regístrate para empezar',
                     style: TextStyle(color: hintColor, fontSize: 16),
                   ),
                   const SizedBox(height: 32),
@@ -177,7 +211,10 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         labelStyle: TextStyle(color: hintColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: purplePrimary, width: 2),
+                          borderSide: BorderSide(
+                            color: purplePrimary,
+                            width: 2,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -225,6 +262,32 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                     ),
                     obscureText: true,
                   ),
+                  const SizedBox(height: 16),
+                  // Confirmar contraseña solo en registro
+                  if (!isLogin)
+                    TextField(
+                      controller: confirmPasswordController,
+                      obscureText: true,
+                      style: TextStyle(color: textColor),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: darkBg,
+                        labelText: 'Confirmar contraseña',
+                        labelStyle: TextStyle(color: hintColor),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: purplePrimary,
+                            width: 2,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: purpleAccent, width: 2),
+                        ),
+                        errorText: confirmPasswordError,
+                      ),
+                    ),
                   const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
@@ -238,31 +301,42 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
-                      child: loading
-                          ? const SizedBox(
-                              width: 28,
-                              height: 28,
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                strokeWidth: 3,
+                      child:
+                          loading
+                              ? const SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                  strokeWidth: 3,
+                                ),
+                              )
+                              : Text(
+                                isLogin ? 'Iniciar sesión' : 'Registrarse',
                               ),
-                            )
-                          : Text(isLogin ? 'Iniciar sesión' : 'Registrarse'),
                     ),
                   ),
                   const SizedBox(height: 18),
                   TextButton(
-                    onPressed: loading
-                        ? null
-                        : () {
-                            setState(() {
-                              isLogin = !isLogin;
-                            });
-                          },
+                    onPressed:
+                        loading
+                            ? null
+                            : () {
+                              setState(() {
+                                isLogin = !isLogin;
+                              });
+                            },
                     child: Text(
-                      isLogin ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión',
+                      isLogin
+                          ? '¿No tenés cuenta? Registrate'
+                          : '¿Ya tenés cuenta? Iniciá sesión',
                       style: TextStyle(
                         color: purpleAccent,
                         fontWeight: FontWeight.w600,
