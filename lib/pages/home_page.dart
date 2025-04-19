@@ -1,75 +1,63 @@
 import 'package:flutter/material.dart';
 import '../shared/styles/app_colors.dart';
-import '../shared/styles/app_text_styles.dart';
-import '../shared/styles/app_decorations.dart';
-import '../shared/styles/app_constants.dart';
+import 'mapa_page.dart';
+import 'viajes_rutas_page.dart';
+import 'comunidad_page.dart';
+import 'perfil_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0;
+
+  static final List<Widget> _pages = <Widget>[
+    MapaPage(),
+    ViajesRutasPage(),
+    ComunidadPage(),
+    PerfilPage(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-
-
     return Scaffold(
       backgroundColor: AppColors.darkBg,
-      appBar: AppBar(
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
         backgroundColor: AppColors.darkCard,
-        elevation: 0,
-        title: Text(
-          'Inicio',
-          style: AppTextStyles.title,
-        ),
-        centerTitle: true,
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: AppDecorations.backgroundGradient,
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.cardPaddingHorizontal,
-              vertical: AppConstants.cardPaddingVertical,
-            ),
-            decoration: AppDecorations.card(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: AppDecorations.iconCircle,
-                  padding: const EdgeInsets.all(AppConstants.iconPadding),
-                  child: Icon(Icons.electric_car_rounded, color: AppColors.textColor, size: AppConstants.iconSize),
-                ),
-                Text(
-                  '¡Bienvenido a Connected Vehicles!',
-                  style: AppTextStyles.welcome,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Esta es la página de inicio. En desarrollo...',
-                  style: AppTextStyles.subtitle,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 30),
-                // Espacio para futuros widgets/contenido
-                Container(
-                  padding: const EdgeInsets.all(AppConstants.cardInnerPadding),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkBg,
-                    borderRadius: BorderRadius.circular(AppConstants.cardInnerBorderRadius),
-                  ),
-                  child: Text(
-                    'Contenido principal aquí',
-                    style: AppTextStyles.cardContent,
-                  ),
-                ),
-              ],
-            ),
+        selectedItemColor: AppColors.purplePrimary,
+        unselectedItemColor: AppColors.textColor.withOpacity(0.6),
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_rounded),
+            label: 'Mapa',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.alt_route_rounded),
+            label: 'Viajes',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_alt_rounded),
+            label: 'Comunidad',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_rounded),
+            label: 'Perfil',
+          ),
+        ],
       ),
     );
   }
