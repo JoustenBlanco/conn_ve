@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home_page.dart';
+import '../shared/styles/app_colors.dart';
+import '../shared/styles/app_text_styles.dart';
+import '../shared/styles/app_decorations.dart';
+import '../shared/styles/app_constants.dart';
 
 class LoginRegisterPage extends StatefulWidget {
   const LoginRegisterPage({super.key});
@@ -128,116 +132,84 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color purplePrimary = const Color(0xFF7B1FA2);
-    final Color purpleAccent = const Color(0xFFB388FF);
-    final Color darkBg = const Color(0xFF18181A);
-    final Color darkCard = const Color(0xFF23232B);
-    final Color textColor = Colors.white;
-    final Color hintColor = Colors.white70;
-
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: AppColors.darkBg,
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF4A148C), Color(0xFF7B1FA2), Color(0xFF18181A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        decoration: AppDecorations.backgroundGradient,
         child: Center(
           child: SingleChildScrollView(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
-              decoration: BoxDecoration(
-                color: darkCard.withOpacity(0.96),
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(
-                    color: purplePrimary.withOpacity(0.2),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.cardPaddingHorizontal,
+                vertical: AppConstants.cardPaddingVertical,
               ),
+              decoration: AppDecorations.card(opacity: 0.96),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Logo/Icono musical
                   Container(
                     margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [purplePrimary, purpleAccent],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(18),
+                    decoration: AppDecorations.iconCircle,
+                    padding: const EdgeInsets.all(AppConstants.iconPadding),
                     child: Icon(
                       Icons.electric_car_rounded,
-                      color: Colors.white,
-                      size: 48,
+                      color: AppColors.textColor,
+                      size: AppConstants.iconSize,
                     ),
                   ),
                   Text(
                     isLogin ? '¡Bienvenido de nuevo!' : 'Crea tu cuenta',
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 28,
-                      letterSpacing: 1.2,
-                    ),
+                    style: AppTextStyles.welcome.copyWith(fontSize: 28, letterSpacing: 1.2),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     isLogin
                         ? 'Inicia sesión para continuar'
                         : 'Regístrate para empezar',
-                    style: TextStyle(color: hintColor, fontSize: 16),
+                    style: AppTextStyles.subtitle,
                   ),
                   const SizedBox(height: 32),
                   if (!isLogin)
                     TextField(
                       controller: nombreController,
-                      style: TextStyle(color: textColor),
+                      style: TextStyle(color: AppColors.textColor),
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: darkBg,
+                        fillColor: AppColors.darkBg,
                         labelText: 'Nombre',
-                        labelStyle: TextStyle(color: hintColor),
+                        labelStyle: TextStyle(color: AppColors.hintColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: purplePrimary,
+                            color: AppColors.purplePrimary,
                             width: 2,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: purpleAccent, width: 2),
+                          borderSide: BorderSide(color: AppColors.purpleAccent, width: 2),
                         ),
                       ),
                     ),
                   if (!isLogin) const SizedBox(height: 16),
                   TextField(
                     controller: emailController,
-                    style: TextStyle(color: textColor),
+                    style: TextStyle(color: AppColors.textColor),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: darkBg,
+                      fillColor: AppColors.darkBg,
                       labelText: 'Correo',
-                      labelStyle: TextStyle(color: hintColor),
+                      labelStyle: TextStyle(color: AppColors.hintColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: purplePrimary, width: 2),
+                        borderSide: BorderSide(color: AppColors.purplePrimary, width: 2),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: purpleAccent, width: 2),
+                        borderSide: BorderSide(color: AppColors.purpleAccent, width: 2),
                       ),
                     ),
                     keyboardType: TextInputType.emailAddress,
@@ -245,19 +217,19 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: passwordController,
-                    style: TextStyle(color: textColor),
+                    style: TextStyle(color: AppColors.textColor),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: darkBg,
+                      fillColor: AppColors.darkBg,
                       labelText: 'Contraseña',
-                      labelStyle: TextStyle(color: hintColor),
+                      labelStyle: TextStyle(color: AppColors.hintColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: purplePrimary, width: 2),
+                        borderSide: BorderSide(color: AppColors.purplePrimary, width: 2),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: purpleAccent, width: 2),
+                        borderSide: BorderSide(color: AppColors.purpleAccent, width: 2),
                       ),
                     ),
                     obscureText: true,
@@ -268,22 +240,22 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                     TextField(
                       controller: confirmPasswordController,
                       obscureText: true,
-                      style: TextStyle(color: textColor),
+                      style: TextStyle(color: AppColors.textColor),
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: darkBg,
+                        fillColor: AppColors.darkBg,
                         labelText: 'Confirmar contraseña',
-                        labelStyle: TextStyle(color: hintColor),
+                        labelStyle: TextStyle(color: AppColors.hintColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: purplePrimary,
+                            color: AppColors.purplePrimary,
                             width: 2,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: purpleAccent, width: 2),
+                          borderSide: BorderSide(color: AppColors.purpleAccent, width: 2),
                         ),
                         errorText: confirmPasswordError,
                       ),
@@ -295,8 +267,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                     child: ElevatedButton(
                       onPressed: loading ? null : handleLoginOrRegister,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: purplePrimary,
-                        foregroundColor: textColor,
+                        backgroundColor: AppColors.purplePrimary,
+                        foregroundColor: AppColors.textColor,
                         elevation: 6,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -337,9 +309,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       isLogin
                           ? '¿No tenés cuenta? Registrate'
                           : '¿Ya tenés cuenta? Iniciá sesión',
-                      style: TextStyle(
-                        color: purpleAccent,
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles.cardContent.copyWith(
+                        color: AppColors.purpleAccent,
                         fontSize: 16,
                         decoration: TextDecoration.underline,
                       ),

@@ -1,99 +1,69 @@
 import 'package:flutter/material.dart';
+import '../shared/styles/app_colors.dart';
+import '../shared/styles/app_text_styles.dart';
+import '../shared/styles/app_decorations.dart';
+import '../shared/styles/app_constants.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final Color purplePrimary = const Color(0xFF7B1FA2);
-    final Color purpleAccent = const Color(0xFFB388FF);
-    final Color darkBg = const Color(0xFF18181A);
-    final Color darkCard = const Color(0xFF23232B);
-    final Color textColor = Colors.white;
-    final Color hintColor = Colors.white70;
+
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: AppColors.darkBg,
       appBar: AppBar(
-        backgroundColor: darkCard,
+        backgroundColor: AppColors.darkCard,
         elevation: 0,
         title: Text(
           'Inicio',
-          style: TextStyle(
-            color: purpleAccent,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            letterSpacing: 1.2,
-          ),
+          style: AppTextStyles.title,
         ),
         centerTitle: true,
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF4A148C), Color(0xFF7B1FA2), Color(0xFF18181A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        decoration: AppDecorations.backgroundGradient,
         child: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
-            decoration: BoxDecoration(
-              color: darkCard.withOpacity(0.96),
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: purplePrimary.withOpacity(0.18),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.cardPaddingHorizontal,
+              vertical: AppConstants.cardPaddingVertical,
             ),
+            decoration: AppDecorations.card(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [purplePrimary, purpleAccent],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(18),
-                  child: Icon(Icons.electric_car_rounded, color: Colors.white, size: 48),
+                  decoration: AppDecorations.iconCircle,
+                  padding: const EdgeInsets.all(AppConstants.iconPadding),
+                  child: Icon(Icons.electric_car_rounded, color: AppColors.textColor, size: AppConstants.iconSize),
                 ),
                 Text(
                   '¡Bienvenido a Connected Vehicles!',
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 26,
-                  ),
+                  style: AppTextStyles.welcome,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Esta es la página de inicio. En desarrollo...',
-                  style: TextStyle(color: hintColor, fontSize: 16),
+                  style: AppTextStyles.subtitle,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 30),
                 // Espacio para futuros widgets/contenido
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppConstants.cardInnerPadding),
                   decoration: BoxDecoration(
-                    color: darkBg,
-                    borderRadius: BorderRadius.circular(20),
+                    color: AppColors.darkBg,
+                    borderRadius: BorderRadius.circular(AppConstants.cardInnerBorderRadius),
                   ),
                   child: Text(
                     'Contenido principal aquí',
-                    style: TextStyle(color: purpleAccent, fontWeight: FontWeight.w600),
+                    style: AppTextStyles.cardContent,
                   ),
                 ),
               ],
