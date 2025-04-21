@@ -8,7 +8,6 @@ class PerfilPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Datos de ejemplo (reemplaza por datos reales cuando los tengas)
     final String nombre = 'Juan Pérez';
     final String correo = 'juan.perez@email.com';
     final String contrasenia = '********';
