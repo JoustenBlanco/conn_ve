@@ -174,6 +174,7 @@ class GrupoChatScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextField(
+                    style: const TextStyle(color: AppColors.textColor),
                     decoration: InputDecoration(
                       hintText: 'Escribe un mensaje...',
                       filled: true,
