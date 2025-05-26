@@ -28,7 +28,7 @@ class MapSearchBar extends StatelessWidget {
             ),
             cursorColor: AppColors.purplePrimary,
             decoration: InputDecoration(
-              hintText: 'Buscar...',
+              hintText: 'Nombre...',
               hintStyle: AppTextStyles.subtitle.copyWith(
                 color: AppColors.hintColor,
               ),

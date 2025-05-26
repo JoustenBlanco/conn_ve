@@ -1,7 +1,13 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../shared/styles/app_colors.dart';
 import '../shared/styles/app_text_styles.dart';
 import '../shared/styles/app_decorations.dart';
+import '../widgets/styled_map.dart';
+import '../services/estaciones_service.dart';
 
 class ViajesRutasPage extends StatefulWidget {
   const ViajesRutasPage({super.key});
@@ -22,6 +28,95 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   String? _tipoCargador; // 'rapido' o 'estandar'
   Set<String> _marcasCompatibles = {};
 
+  Position? _currentPosition;
+  bool _loadingMapa = true;
+  String? _errorMapa;
+  GoogleMapController? _mapController;
+  List<EstacionCarga> _estacionesSugeridas = []; // Puedes poblar esto según tu lógica
+
+  Set<Polyline> _polylines = {};
+
+  // Reemplaza con tu propia clave de API de Google Directions
+  static const String _googleApiKey = 'AIzaSyB9wb0w7fj8PPxWUpa_ptP4IrQU9Hgcp-A';
+
+  // Copia el estilo de mapa de mapa_page
+  static const String _mapStyle = '''
+  [
+    {
+      "featureType": "water",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#4B176A" }
+      ]
+    },
+    {
+      "featureType": "landscape",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#18181A" }
+      ]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#7B1FA2" },
+        { "lightness": -20 }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#2A1946" }
+      ]
+    },
+    {
+      "featureType": "transit",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#B388FF" }
+      ]
+    },
+    {
+      "elementType": "labels.text.stroke",
+      "stylers": [
+        { "visibility": "on" },
+        { "color": "#23232B" },
+        { "weight": 2 },
+        { "gamma": 0.84 }
+      ]
+    },
+    {
+      "elementType": "labels.text.fill",
+      "stylers": [
+        { "color": "#ffffff" }
+      ]
+    },
+    {
+      "featureType": "administrative",
+      "elementType": "geometry",
+      "stylers": [
+        { "weight": 0.6 },
+        { "color": "#7B1FA2" }
+      ]
+    },
+    {
+      "elementType": "labels.icon",
+      "stylers": [
+        { "visibility": "off" }
+      ]
+    },
+    {
+      "featureType": "poi.park",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#23232B" }
+      ]
+    }
+  ]
+  ''';
+
   // Ejemplo de opciones de autocomplete
   final List<String> _sugerenciasDirecciones = [
     'San José, Costa Rica',
@@ -39,11 +134,210 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     super.dispose();
   }
 
-  void _planificarRuta() {
+  @override
+  void initState() {
+    super.initState();
+    _initLocation();
+    // Si tienes lógica para sugerir estaciones, puedes cargar aquí
+    //_fetchEstacionesSugeridas();
+  }
+
+  Future<void> _initLocation() async {
+    setState(() {
+      _loadingMapa = true;
+      _errorMapa = null;
+    });
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _currentPosition = position;
+        _loadingMapa = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMapa = 'Error obteniendo ubicación: ${e.toString()}';
+        _loadingMapa = false;
+      });
+    }
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    _mapController?.setMapStyle(_mapStyle);
+  }
+
+  // Utilidad para obtener coordenadas desde una dirección usando Geocoding API
+  Future<LatLng?> _getLatLngFromAddress(String address) async {
+    if (address.isEmpty) return null;
+    if (address.toLowerCase() == 'ubicación actual' && _currentPosition != null) {
+      return LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
+    }
+    final url =
+        'https://maps.googleapis.com/maps/api/geocode/json?address=${Uri.encodeComponent(address)}&key=$_googleApiKey';
+    final response = await http.get(Uri.parse(url));
+    final data = json.decode(response.body);
+    print('Geocoding response for "$address": $data'); // DEBUG
+
+    // Manejo de errores de autorización
+    if (data['status'] == 'REQUEST_DENIED') {
+      final errorMsg = data['error_message'] ?? 'API Key no autorizada para Geocoding.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de Google Maps: $errorMsg')),
+      );
+      print('ERROR: $errorMsg');
+      return null;
+    }
+
+    if (data['status'] == 'OK' && data['results'] != null && data['results'].isNotEmpty) {
+      final location = data['results'][0]['geometry']['location'];
+      return LatLng(location['lat'], location['lng']);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo encontrar la dirección: "$address"')),
+      );
+    }
+    return null;
+  }
+
+  // Utilidad para obtener la ruta entre dos puntos usando Directions API
+  Future<List<LatLng>> _getRouteCoordinates(LatLng origin, LatLng destination) async {
+    final url =
+        'https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=$_googleApiKey';
+    final response = await http.get(Uri.parse(url));
+    final data = json.decode(response.body);
+    if (data['status'] == 'OK') {
+      final points = data['routes'][0]['overview_polyline']['points'];
+      return _decodePolyline(points);
+    }
+    return [];
+  }
+
+  // Decodifica la polyline de Google Directions
+  List<LatLng> _decodePolyline(String encoded) {
+    List<LatLng> poly = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      poly.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+    return poly;
+  }
+
+  // Variables para guardar la posición del destino
+  LatLng? _destinoLatLng;
+
+  Future<void> _planificarRuta() async {
     FocusScope.of(context).unfocus();
     setState(() {
       _mostrarResultado = true;
+      _polylines = {};
+      _destinoLatLng = null;
     });
+
+    String origen = _origenController.text.trim();
+    String destino = _destinoController.text.trim();
+
+    print('Valor actual _origenController: "$origen"');
+    print('Valor actual _destinoController: "$destino"');
+
+    if (origen.isEmpty || destino.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor ingresa origen y destino')),
+      );
+      return;
+    }
+
+    LatLng? origenLatLng = await _getLatLngFromAddress(origen);
+    LatLng? destinoLatLng = await _getLatLngFromAddress(destino);
+
+    print('OrigenLatLng: $origenLatLng');
+    print('DestinoLatLng: $destinoLatLng');
+
+    if (origenLatLng == null || destinoLatLng == null) {
+      print('No se pudo obtener coordenadas de origen o destino');
+      return;
+    }
+
+    final routeCoords = await _getRouteCoordinates(origenLatLng, destinoLatLng);
+
+    print('Cantidad de puntos en la ruta: ${routeCoords.length}');
+    if (routeCoords.isEmpty) {
+      print('No se recibieron puntos para la polyline');
+    }
+
+    setState(() {
+      _polylines = {
+        Polyline(
+          polylineId: const PolylineId('ruta'),
+          color: AppColors.purpleAccent,
+          width: 6,
+          points: routeCoords,
+        ),
+      };
+      _destinoLatLng = destinoLatLng; // Guarda la posición del destino
+      print('Polylines seteadas: ${_polylines.length}');
+    });
+  }
+
+  Set<Marker> _buildMarkers(PositionData? position) {
+    final markers = <Marker>{};
+
+    // Marcador de usuario
+    
+
+    // Marcadores de estaciones sugeridas
+    for (final e in _estacionesSugeridas) {
+      markers.add(
+        Marker(
+          markerId: MarkerId('estacion_${e.id}'),
+          position: LatLng(e.latitud, e.longitud),
+          infoWindow: InfoWindow(
+            title: e.nombre,
+            snippet: 'Toca para ver detalles',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+          onTap: () {
+            // Puedes mostrar el diálogo si lo deseas
+          },
+        ),
+      );
+    }
+
+    // Marcador de destino (si existe)
+    if (_destinoLatLng != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('destino'),
+          position: _destinoLatLng!,
+          infoWindow: const InfoWindow(title: 'Destino'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    }
+
+    return markers;
   }
 
   Widget _buildSectionTitle(String text) {
@@ -78,7 +372,16 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                   focusNode,
                   onEditingComplete,
                 ) {
-                  _origenController.text = controller.text;
+                  // Sincroniza el controlador de Autocomplete con el principal
+                  controller.text = _origenController.text;
+                  controller.selection = TextSelection.fromPosition(
+                    TextPosition(offset: controller.text.length),
+                  );
+                  controller.addListener(() {
+                    if (_origenController.text != controller.text) {
+                      _origenController.text = controller.text;
+                    }
+                  });
                   return TextFormField(
                     controller: controller,
                     focusNode: focusNode,
@@ -98,6 +401,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                         tooltip: 'Usar ubicación actual',
                         onPressed: () {
                           controller.text = 'Ubicación actual';
+                          _origenController.text = 'Ubicación actual';
                         },
                       ),
                     ),
@@ -128,7 +432,16 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
             focusNode,
             onEditingComplete,
           ) {
-            _destinoController.text = controller.text;
+            // Sincroniza el controlador de Autocomplete con el principal
+            controller.text = _destinoController.text;
+            controller.selection = TextSelection.fromPosition(
+              TextPosition(offset: controller.text.length),
+            );
+            controller.addListener(() {
+              if (_destinoController.text != controller.text) {
+                _destinoController.text = controller.text;
+              }
+            });
             return TextFormField(
               controller: controller,
               focusNode: focusNode,
@@ -318,20 +631,38 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
 
   Widget _buildResultado() {
     if (!_mostrarResultado) return const SizedBox.shrink();
+    print('Polylines enviadas a StyledMap: ${_polylines.length}');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('Resultado: Vista previa de la ruta'),
         Container(
-          height: 180,
+          height: 220,
           width: double.infinity,
           margin: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: AppColors.darkCard,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Center(
-            child: Text('Mapa embebido aquí', style: AppTextStyles.subtitle),
+          child: StyledMap(
+            loading: _loadingMapa,
+            error: _errorMapa,
+            position: _currentPosition == null
+                ? null
+                : PositionData(
+                    latitude: _currentPosition!.latitude,
+                    longitude: _currentPosition!.longitude,
+                  ),
+            onMapCreated: _onMapCreated,
+            estaciones: _estacionesSugeridas,
+            polylines: _polylines,
+            // Pasa los marcadores personalizados
+            customMarkers: _buildMarkers(_currentPosition == null
+                ? null
+                : PositionData(
+                    latitude: _currentPosition!.latitude,
+                    longitude: _currentPosition!.longitude,
+                  )),
           ),
         ),
         const SizedBox(height: 8),
