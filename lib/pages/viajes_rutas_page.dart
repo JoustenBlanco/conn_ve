@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:math';
 import '../shared/styles/app_colors.dart';
 import '../shared/styles/app_text_styles.dart';
 import '../shared/styles/app_decorations.dart';
@@ -32,7 +33,8 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   bool _loadingMapa = true;
   String? _errorMapa;
   GoogleMapController? _mapController;
-  List<EstacionCarga> _estacionesSugeridas = []; // Puedes poblar esto según tu lógica
+  List<EstacionCarga> _estacionesSugeridas = [];
+  List<EstacionCarga> _todasEstaciones = []; // Para guardar todas las estaciones
 
   Set<Polyline> _polylines = {};
 
@@ -138,8 +140,22 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   void initState() {
     super.initState();
     _initLocation();
-    // Si tienes lógica para sugerir estaciones, puedes cargar aquí
-    //_fetchEstacionesSugeridas();
+    _fetchEstaciones(); // Cargar estaciones al iniciar
+  }
+
+  Future<void> _fetchEstaciones() async {
+    try {
+      final estaciones = await EstacionesService.obtenerEstaciones();
+      print('DEBUG: Estaciones obtenidas: ${estaciones.length}');
+      setState(() {
+        _todasEstaciones = estaciones;
+      });
+    } catch (e) {
+      setState(() {
+        _todasEstaciones = [];
+      });
+      print('DEBUG: Error obteniendo estaciones: $e');
+    }
   }
 
   Future<void> _initLocation() async {
@@ -248,12 +264,74 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   // Variables para guardar la posición del destino
   LatLng? _destinoLatLng;
 
+  // Calcula la distancia entre dos puntos (en km)
+  double _distanceKm(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371; // Radio de la tierra en km
+    final dLat = (lat2 - lat1) * pi / 180.0;
+    final dLon = (lon2 - lon1) * pi / 180.0;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180.0) * cos(lat2 * pi / 180.0) *
+        sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c;
+  }
+
+  // Retorna true si la estación está cerca de la ruta (a menos de X km de algún punto)
+  bool _estaCercaDeRuta(EstacionCarga estacion, List<LatLng> ruta, {double maxDistKm = 10.0}) {
+    for (final punto in ruta) {
+      final dist = _distanceKm(estacion.latitud, estacion.longitud, punto.latitude, punto.longitude);
+      if (dist <= maxDistKm) return true;
+    }
+    return false;
+  }
+
+  // Calcula la distancia en ruta desde el origen hasta el punto más cercano a la estación
+  double _distanciaEnRutaHastaEstacion(LatLng origen, EstacionCarga estacion, List<LatLng> ruta) {
+    if (ruta.isEmpty) return 0.0;
+    double distancia = 0.0;
+    double minDist = double.infinity;
+    int idxMasCercano = 0;
+    for (int i = 0; i < ruta.length; i++) {
+      final punto = ruta[i];
+      final dist = _distanceKm(punto.latitude, punto.longitude, estacion.latitud, estacion.longitud);
+      if (dist < minDist) {
+        minDist = dist;
+        idxMasCercano = i;
+      }
+    }
+    // Suma la distancia desde el origen hasta el punto más cercano
+    for (int i = 0; i < idxMasCercano; i++) {
+      distancia += _distanceKm(ruta[i].latitude, ruta[i].longitude, ruta[i + 1].latitude, ruta[i + 1].longitude);
+    }
+    // Suma la distancia desde el punto más cercano hasta la estación
+    distancia += _distanceKm(ruta[idxMasCercano].latitude, ruta[idxMasCercano].longitude, estacion.latitud, estacion.longitud);
+    return distancia;
+  }
+
+  // Mapeo de marcas a tipos de enchufe compatibles
+  final Map<String, List<String>> _marcasEnchufe = const {
+    'Tesla': ['Tesla', 'Tipo 2', 'CCS Combo 2', 'Supercharger'],
+    'ChargePoint': ['Tipo 1', 'Tipo 2', 'CCS', 'CHAdeMO'],
+    'Otro': ['Tipo 1', 'Tipo 2', 'CCS Combo 2', 'CHAdeMO', 'Tesla', 'Supercharger'],
+  };
+
+  // Determina si la estación es carga rápida o estándar
+  bool _esCargaRapida(EstacionCarga estacion) {
+    // Puedes ajustar el umbral según tu criterio
+    return (estacion.potenciaKw ?? 0) >= 43;
+  }
+
+  bool _esCargaEstandar(EstacionCarga estacion) {
+    return (estacion.potenciaKw ?? 0) < 43;
+  }
+
   Future<void> _planificarRuta() async {
     FocusScope.of(context).unfocus();
     setState(() {
       _mostrarResultado = true;
       _polylines = {};
       _destinoLatLng = null;
+      _estacionesSugeridas = [];
     });
 
     String origen = _origenController.text.trim();
@@ -261,6 +339,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
 
     print('Valor actual _origenController: "$origen"');
     print('Valor actual _destinoController: "$destino"');
+    print('DEBUG: Total estaciones disponibles: ${_todasEstaciones.length}');
 
     if (origen.isEmpty || destino.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -282,10 +361,73 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
 
     final routeCoords = await _getRouteCoordinates(origenLatLng, destinoLatLng);
 
-    print('Cantidad de puntos en la ruta: ${routeCoords.length}');
+    print('DEBUG: Cantidad de puntos en la ruta: ${routeCoords.length}');
     if (routeCoords.isEmpty) {
       print('No se recibieron puntos para la polyline');
     }
+
+    // Debug: Imprime distancias de cada estación a la ruta
+    for (final estacion in _todasEstaciones) {
+      double minDist = double.infinity;
+      for (final punto in routeCoords) {
+        final dist = _distanceKm(estacion.latitud, estacion.longitud, punto.latitude, punto.longitude);
+        if (dist < minDist) minDist = dist;
+      }
+      print('DEBUG: Estación ${estacion.nombre} (id:${estacion.id}) minDist a ruta: $minDist km');
+    }
+
+    // Filtrar estaciones cercanas a la ruta
+    List<EstacionCarga> sugeridas = _todasEstaciones.where((e) => _estaCercaDeRuta(e, routeCoords)).toList();
+
+    // --- FILTRO POR PREFERENCIAS DE CARGA ---
+    // Filtrar por tipo de cargador (potencia)
+    if (_tipoCargador == 'rapido') {
+      sugeridas = sugeridas.where(_esCargaRapida).toList();
+    } else if (_tipoCargador == 'estandar') {
+      sugeridas = sugeridas.where(_esCargaEstandar).toList();
+    }
+
+    // Filtrar por marcas compatibles (tipo de enchufe)
+    if (_marcasCompatibles.isNotEmpty) {
+      final tiposCompatibles = <String>{};
+      for (final marca in _marcasCompatibles) {
+        tiposCompatibles.addAll(_marcasEnchufe[marca] ?? []);
+      }
+      sugeridas = sugeridas.where((e) {
+        final tipo = (e.tipoEnchufe ?? '').toLowerCase();
+        return tiposCompatibles.any((t) => tipo.contains(t.toLowerCase()));
+      }).toList();
+    }
+
+    print('DEBUG: Estaciones sugeridas tras filtros preferencias: ${sugeridas.length}');
+
+    // --- ORDENAR POR PRIORIDAD SEGÚN AUTONOMÍA ---
+    final List<Map<String, dynamic>> estacionesConDistancia = sugeridas.map((e) {
+      final dist = _distanciaEnRutaHastaEstacion(
+        routeCoords.isNotEmpty ? routeCoords.first : origenLatLng,
+        e,
+        routeCoords,
+      );
+      return {
+        'estacion': e,
+        'distancia': dist,
+        'prioritaria': dist <= _autonomia,
+      };
+    }).toList();
+
+    estacionesConDistancia.sort((a, b) {
+      if (a['prioritaria'] && !b['prioritaria']) return -1;
+      if (!a['prioritaria'] && b['prioritaria']) return 1;
+      return (a['distancia'] as double).compareTo(b['distancia'] as double);
+    });
+
+    final List<EstacionCarga> sugeridasOrdenadas = estacionesConDistancia.map((e) => e['estacion'] as EstacionCarga).toList();
+    final Set<int> idsPrioritarias = estacionesConDistancia.where((e) => e['prioritaria']).map((e) => (e['estacion'] as EstacionCarga).id).toSet();
+    final Map<int, double> distanciasEstaciones = {
+      for (var e in estacionesConDistancia) (e['estacion'] as EstacionCarga).id: e['distancia'] as double
+    };
+
+    print('DEBUG: Estaciones prioritarias: $idsPrioritarias');
 
     setState(() {
       _polylines = {
@@ -296,18 +438,32 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
           points: routeCoords,
         ),
       };
-      _destinoLatLng = destinoLatLng; // Guarda la posición del destino
-      print('Polylines seteadas: ${_polylines.length}');
+      _destinoLatLng = destinoLatLng;
+      _estacionesSugeridas = sugeridasOrdenadas;
+      _idsEstacionesPrioritarias = idsPrioritarias;
+      _distanciasEstaciones = distanciasEstaciones;
     });
   }
+
+  // Variables para guardar ids de prioritarias y distancias
+  Set<int> _idsEstacionesPrioritarias = {};
+  Map<int, double> _distanciasEstaciones = {};
 
   Set<Marker> _buildMarkers(PositionData? position) {
     final markers = <Marker>{};
 
     // Marcador de usuario
-    
+    if (position != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('user_location'),
+          position: LatLng(position.latitude, position.longitude),
+          infoWindow: const InfoWindow(title: 'Tu ubicación'),
+        ),
+      );
+    }
 
-    // Marcadores de estaciones sugeridas
+    // Marcadores de estaciones sugeridas (con diálogo al tocar)
     for (final e in _estacionesSugeridas) {
       markers.add(
         Marker(
@@ -319,7 +475,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
           onTap: () {
-            // Puedes mostrar el diálogo si lo deseas
+            _showEstacionDialog(context, e);
           },
         ),
       );
@@ -338,6 +494,43 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     }
 
     return markers;
+  }
+
+  void _showEstacionDialog(BuildContext context, EstacionCarga estacion) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: Text(
+          estacion.nombre,
+          style: AppTextStyles.title,
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Enchufe: ${estacion.tipoEnchufe ?? "N/A"}', style: AppTextStyles.cardContent),
+              Text('Tarifa: ${estacion.tarifa ?? "N/A"}', style: AppTextStyles.cardContent),
+              Text('Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}', style: AppTextStyles.cardContent),
+              Text('Disponible: ${estacion.disponible ? "Sí" : "No"}', style: AppTextStyles.cardContent),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.secondary,
+              textStyle: AppTextStyles.subtitle,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSectionTitle(String text) {
@@ -637,7 +830,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       children: [
         _buildSectionTitle('Resultado: Vista previa de la ruta'),
         Container(
-          height: 220,
+          height: 500,
           width: double.infinity,
           margin: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
@@ -656,7 +849,6 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
             onMapCreated: _onMapCreated,
             estaciones: _estacionesSugeridas,
             polylines: _polylines,
-            // Pasa los marcadores personalizados
             customMarkers: _buildMarkers(_currentPosition == null
                 ? null
                 : PositionData(
@@ -667,35 +859,77 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
         ),
         const SizedBox(height: 8),
         Text('Estaciones sugeridas:', style: AppTextStyles.subtitle),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: 2, // Cambia por el número real de estaciones sugeridas
-          itemBuilder: (context, idx) {
-            return Card(
-              color: AppColors.darkCard,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              margin: const EdgeInsets.symmetric(vertical: 6),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.ev_station,
-                  color: AppColors.purpleAccent,
+        SizedBox(
+          height: 220, // Limita la altura para evitar overflow
+          child: ListView.builder(
+            shrinkWrap: true,
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: _estacionesSugeridas.length,
+            itemBuilder: (context, idx) {
+              final estacion = _estacionesSugeridas[idx];
+              final esPrioritaria = _idsEstacionesPrioritarias.contains(estacion.id);
+              final distancia = _distanciasEstaciones[estacion.id] ?? 0.0;
+              return Card(
+                color: esPrioritaria ? AppColors.purpleAccent.withOpacity(0.25) : AppColors.darkCard,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: esPrioritaria
+                      ? BorderSide(color: AppColors.purpleAccent, width: 2)
+                      : BorderSide.none,
                 ),
-                title: Text(
-                  'Estación ${idx + 1}',
-                  style: AppTextStyles.cardContent,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.ev_station,
+                    color: esPrioritaria ? AppColors.purpleAccent : AppColors.purplePrimary,
+                  ),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          estacion.nombre,
+                          style: AppTextStyles.cardContent,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (esPrioritaria)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.purpleAccent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Prioritaria',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    'Distancia en ruta: ${distancia.toStringAsFixed(1)} km\n'
+                    'Enchufe: ${estacion.tipoEnchufe ?? "N/A"}\n'
+                    'Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}\n'
+                    'Disponible: ${estacion.disponible ? "Sí" : "No"}',
+                    style: AppTextStyles.cardContent.copyWith(fontSize: 13),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.share, color: AppColors.purpleAccent),
+                    onPressed: () {},
+                    tooltip: 'Compartir',
+                  ),
+                  onTap: () => _showEstacionDialog(context, estacion),
                 ),
-                subtitle: const Text('Distancia al desvío: 3.2 km'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.share, color: AppColors.purpleAccent),
-                  onPressed: () {},
-                  tooltip: 'Compartir',
-                ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
         const SizedBox(height: 12),
         Row(
