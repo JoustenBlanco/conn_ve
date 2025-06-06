@@ -28,12 +28,12 @@ flutter:
   uses-material-design: true
 
   assets:
-    - lib/shared/images/logoCV.jpg
+    - lib/shared/images/logoCV.png
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "lib/shared/images/logoCV.jpg"
+  image_path: "lib/shared/images/logoCV.png"
 
 dependency_overrides:
   sign_in_with_apple:
