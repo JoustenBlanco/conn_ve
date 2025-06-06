@@ -361,13 +361,14 @@ class _GrupoChatScreenState extends State<GrupoChatScreen> {
                 if (mensajes.isEmpty) {
                   return const Center(child: Text('No hay mensajes aún.'));
                 }
-                // Mensajes ordenados de más antiguos a más nuevos (ascendente)
+                // Mostrar mensajes de más nuevos abajo (orden descendente)
+                final mensajesOrdenados = List<GrupoMensaje>.from(mensajes)..sort((a, b) => a.fecha.compareTo(b.fecha));
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  itemCount: mensajes.length,
+                  itemCount: mensajesOrdenados.length,
                   itemBuilder: (context, idx) {
-                    final m = mensajes[idx];
+                    final m = mensajesOrdenados[idx];
                     final isMe = m.idUsuario == userId;
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
