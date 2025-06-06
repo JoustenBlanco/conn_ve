@@ -9,9 +9,12 @@ import '../shared/styles/app_text_styles.dart';
 import '../shared/styles/app_decorations.dart';
 import '../widgets/styled_map.dart';
 import '../services/estaciones_service.dart';
+import '../services/rutas_service.dart';
 
 class ViajesRutasPage extends StatefulWidget {
-  const ViajesRutasPage({super.key});
+  final Ruta? ruta; // NUEVO: ruta existente opcional
+
+  const ViajesRutasPage({super.key, this.ruta});
 
   @override
   State<ViajesRutasPage> createState() => _ViajesRutasPageState();
@@ -128,6 +131,8 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     'Limón, Costa Rica',
   ];
 
+  DateTime? _fechaProgramada;
+
   @override
   void dispose() {
     _origenController.dispose();
@@ -139,8 +144,86 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   @override
   void initState() {
     super.initState();
+    _fechaProgramada = DateTime.now();
     _initLocation();
     _fetchEstaciones(); // Cargar estaciones al iniciar
+
+    // NUEVO: Si viene una ruta, cargar sus datos
+    if (widget.ruta != null) {
+      _cargarRuta(widget.ruta!);
+    }
+  }
+
+  Future<void> _cargarRuta(Ruta ruta) async {
+    // Cargar campos de texto
+    _origenController.text = ruta.origenNombre;
+    _destinoController.text = ruta.destinoNombre;
+    _autonomia = ruta.autonomiaKm.toDouble();
+    _autonomiaManualController.text = ruta.autonomiaKm.toString();
+    _usarSlider = true;
+    _tipoCargador = ruta.preferenciaCarga == null
+        ? null
+        : (ruta.preferenciaCarga!.toLowerCase().contains('rápido') ? 'rapido' : 'estandar');
+    _marcasCompatibles = ruta.marcasCompatibles.toSet();
+    _fechaProgramada = ruta.fechaProgramada;
+
+    // Esperar a que estaciones estén cargadas
+    if (_todasEstaciones.isEmpty) {
+      await _fetchEstaciones();
+    }
+
+    // Obtener coordenadas de origen y destino
+    final origenLatLng = LatLng(ruta.origenLatitud, ruta.origenLongitud);
+    final destinoLatLng = LatLng(ruta.destinoLatitud, ruta.destinoLongitud);
+
+    // Obtener polyline de la ruta
+    final routeCoords = await _getRouteCoordinates(origenLatLng, destinoLatLng);
+
+    // Filtrar estaciones sugeridas por id
+    final idsEstaciones = ruta.estaciones.map((e) => e['id'] as int).toSet();
+    final sugeridas = _todasEstaciones.where((e) => idsEstaciones.contains(e.id)).toList();
+
+    // Calcular distancias y prioritarias
+    final List<Map<String, dynamic>> estacionesConDistancia = sugeridas.map((e) {
+      final dist = _distanciaEnRutaHastaEstacion(
+        routeCoords.isNotEmpty ? routeCoords.first : origenLatLng,
+        e,
+        routeCoords,
+      );
+      return {
+        'estacion': e,
+        'distancia': dist,
+        'prioritaria': dist <= _autonomia,
+      };
+    }).toList();
+
+    estacionesConDistancia.sort((a, b) {
+      if (a['prioritaria'] && !b['prioritaria']) return -1;
+      if (!a['prioritaria'] && b['prioritaria']) return 1;
+      return (a['distancia'] as double).compareTo(b['distancia'] as double);
+    });
+
+    final sugeridasOrdenadas = estacionesConDistancia.map((e) => e['estacion'] as EstacionCarga).toList();
+    final idsPrioritarias = estacionesConDistancia.where((e) => e['prioritaria']).map((e) => (e['estacion'] as EstacionCarga).id).toSet();
+    final distanciasEstaciones = {
+      for (var e in estacionesConDistancia) (e['estacion'] as EstacionCarga).id: e['distancia'] as double
+    };
+
+    setState(() {
+      _mostrarResultado = true;
+      _polylines = {
+        Polyline(
+          polylineId: const PolylineId('ruta'),
+          color: AppColors.purpleAccent,
+          width: 6,
+          points: routeCoords,
+        ),
+      };
+      _destinoLatLng = destinoLatLng;
+      _estacionesSugeridas = sugeridasOrdenadas;
+      _idsEstacionesPrioritarias = idsPrioritarias;
+      _distanciasEstaciones = distanciasEstaciones;
+    });
   }
 
   Future<void> _fetchEstaciones() async {
@@ -327,6 +410,36 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
 
   Future<void> _planificarRuta() async {
     FocusScope.of(context).unfocus();
+
+    // Validaciones antes de planificar
+    final origenText = _origenController.text.trim();
+    final destinoText = _destinoController.text.trim();
+
+    if (origenText.isEmpty || destinoText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor ingresa origen y destino')),
+      );
+      return;
+    }
+    if (_tipoCargador == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona el tipo de cargador')),
+      );
+      return;
+    }
+    if (_marcasCompatibles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona al menos una marca compatible')),
+      );
+      return;
+    }
+    if (_fechaProgramada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona la fecha del viaje')),
+      );
+      return;
+    }
+
     setState(() {
       _mostrarResultado = true;
       _polylines = {};
@@ -334,22 +447,12 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       _estacionesSugeridas = [];
     });
 
-    String origen = _origenController.text.trim();
-    String destino = _destinoController.text.trim();
-
-    print('Valor actual _origenController: "$origen"');
-    print('Valor actual _destinoController: "$destino"');
+    print('Valor actual _origenController: "$origenText"');
+    print('Valor actual _destinoController: "$destinoText"');
     print('DEBUG: Total estaciones disponibles: ${_todasEstaciones.length}');
 
-    if (origen.isEmpty || destino.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor ingresa origen y destino')),
-      );
-      return;
-    }
-
-    LatLng? origenLatLng = await _getLatLngFromAddress(origen);
-    LatLng? destinoLatLng = await _getLatLngFromAddress(destino);
+    LatLng? origenLatLng = await _getLatLngFromAddress(origenText);
+    LatLng? destinoLatLng = await _getLatLngFromAddress(destinoText);
 
     print('OrigenLatLng: $origenLatLng');
     print('DestinoLatLng: $destinoLatLng');
@@ -360,11 +463,6 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     }
 
     final routeCoords = await _getRouteCoordinates(origenLatLng, destinoLatLng);
-
-    print('DEBUG: Cantidad de puntos en la ruta: ${routeCoords.length}');
-    if (routeCoords.isEmpty) {
-      print('No se recibieron puntos para la polyline');
-    }
 
     // Debug: Imprime distancias de cada estación a la ruta
     for (final estacion in _todasEstaciones) {
@@ -445,6 +543,106 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     });
   }
 
+  // Parámetros para la calculadora (ahora editables)
+  double _consumoVE_kWh_100km = 18.0; // kWh/100km
+  double _precioKWh = 120.0; // CRC por kWh
+  double _consumoGasolina_L_100km = 8.5; // L/100km
+  double _precioGasolina_L = 800.0; // CRC por litro
+  double _emisionCO2_L = 2.31; // kg CO2 por litro gasolina
+  double _emisionCO2_kWh = 0.35; // kg CO2 por kWh (opcional, Costa Rica es bajo)
+
+  // Resultados de la calculadora
+  double? _costoVE;
+  double? _costoGasolina;
+  double? _emisionGasolina;
+  double? _emisionVE;
+  double? _reduccionCO2;
+
+  // Calcula costos y emisiones SOLO según la distancia y valores promedio
+  void _calcularCostosYEmisiones(double distanciaKm) {
+    double energiaTotalKWh = distanciaKm * _consumoVE_kWh_100km / 100.0;
+    _costoVE = energiaTotalKWh * _precioKWh;
+
+    double litrosGasolina = distanciaKm * _consumoGasolina_L_100km / 100.0;
+    _costoGasolina = litrosGasolina * _precioGasolina_L;
+
+    _emisionGasolina = litrosGasolina * _emisionCO2_L;
+    _emisionVE = energiaTotalKWh * _emisionCO2_kWh;
+    _reduccionCO2 = _emisionGasolina! - _emisionVE!;
+    if (_reduccionCO2! < 0) _reduccionCO2 = 0;
+  }
+
+  @override
+  Future<void> _guardarRuta() async {
+    if (_estacionesSugeridas.isEmpty || _destinoLatLng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Primero planifica la ruta')),
+      );
+      return;
+    }
+    try {
+      // Calcular distancia total de la ruta (usando la suma de distancias entre puntos de la polyline)
+      double distanciaKm = 0.0;
+      final puntos = _polylines.isNotEmpty ? _polylines.first.points : [];
+      for (int i = 0; i < puntos.length - 1; i++) {
+        distanciaKm += _distanceKm(
+          puntos[i].latitude, puntos[i].longitude,
+          puntos[i + 1].latitude, puntos[i + 1].longitude,
+        );
+      }
+
+      // --- NUEVO: Calcula costos y emisiones antes de guardar ---
+      _calcularCostosYEmisiones(distanciaKm);
+
+      // Serializar estaciones sugeridas (solo info relevante)
+      final estacionesJson = _estacionesSugeridas.map((e) => {
+        'id': e.id,
+        'nombre': e.nombre,
+        'latitud': e.latitud,
+        'longitud': e.longitud,
+        'tipo_enchufe': e.tipoEnchufe,
+        'potencia_kw': e.potenciaKw,
+        'tarifa': e.tarifa,
+        'disponible': e.disponible,
+      }).toList();
+
+      // Obtener coordenadas de origen y destino
+      LatLng? origenLatLng = await _getLatLngFromAddress(_origenController.text.trim());
+      LatLng? destinoLatLng = _destinoLatLng;
+
+      if (origenLatLng == null || destinoLatLng == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudieron obtener las coordenadas de origen o destino')),
+        );
+        return;
+      }
+
+      await RutasService.guardarRuta(
+        origenNombre: _origenController.text.trim(),
+        destinoNombre: _destinoController.text.trim(),
+        distanciaKm: distanciaKm,
+        estaciones: estacionesJson,
+        autonomiaKm: _autonomia.round(),
+        preferenciaCarga: _tipoCargador == null
+            ? null
+            : (_tipoCargador == 'rapido' ? 'Rápido' : 'Estándar'),
+        marcasCompatibles: _marcasCompatibles.toList(),
+        fechaProgramada: _fechaProgramada ?? DateTime.now(),
+        origenLatitud: origenLatLng.latitude,
+        origenLongitud: origenLatLng.longitude,
+        destinoLatitud: destinoLatLng.latitude,
+        destinoLongitud: destinoLatLng.longitude,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ruta guardada exitosamente')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar ruta: $e')),
+      );
+    }
+  }
+
   // Variables para guardar ids de prioritarias y distancias
   Set<int> _idsEstacionesPrioritarias = {};
   Map<int, double> _distanciasEstaciones = {};
@@ -452,13 +650,26 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   Set<Marker> _buildMarkers(PositionData? position) {
     final markers = <Marker>{};
 
-    // Marcador de usuario
-    if (position != null) {
+    // Eliminar el marcador de usuario (ubicación actual)
+    // if (position != null) {
+    //   markers.add(
+    //     Marker(
+    //       markerId: const MarkerId('user_location'),
+    //       position: LatLng(position.latitude, position.longitude),
+    //       infoWindow: const InfoWindow(title: 'Tu ubicación'),
+    //     ),
+    //   );
+    // }
+
+    // Marcador de origen (inicio de la ruta) si existe
+    if (_polylines.isNotEmpty && _polylines.first.points.isNotEmpty) {
+      final origen = _polylines.first.points.first;
       markers.add(
         Marker(
-          markerId: const MarkerId('user_location'),
-          position: LatLng(position.latitude, position.longitude),
-          infoWindow: const InfoWindow(title: 'Tu ubicación'),
+          markerId: const MarkerId('origen'),
+          position: origen,
+          infoWindow: const InfoWindow(title: 'Origen'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed), // Morado accent
         ),
       );
     }
@@ -822,13 +1033,236 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     );
   }
 
-  Widget _buildResultado() {
-    if (!_mostrarResultado) return const SizedBox.shrink();
-    print('Polylines enviadas a StyledMap: ${_polylines.length}');
+  Widget _buildFechaSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Resultado: Vista previa de la ruta'),
+        _buildSectionTitle('Fecha del viaje'),
+        InkWell(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: _fechaProgramada ?? DateTime.now(),
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 365)),
+            );
+            if (picked != null) {
+              setState(() {
+                _fechaProgramada = picked;
+              });
+            }
+          },
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.calendar_today, color: AppColors.purpleAccent),
+              labelText: 'Fecha programada',
+              border: OutlineInputBorder(),
+            ),
+            child: Text(
+              _fechaProgramada != null
+                  ? '${_fechaProgramada!.day}/${_fechaProgramada!.month}/${_fechaProgramada!.year}'
+                  : 'Selecciona una fecha',
+              style: AppTextStyles.cardContent,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Widget para mostrar la calculadora de costos y emisiones
+  Widget _buildCalculadoraCostosEmisiones(double distanciaKm) {
+    return Card(
+      color: AppColors.darkCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Comparativa de costos y emisiones', style: AppTextStyles.subtitle),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Vehículo Eléctrico', style: TextStyle(color: AppColors.purpleAccent, fontWeight: FontWeight.bold)),
+                      Text('Costo estimado: ₡${_costoVE?.toStringAsFixed(0) ?? "--"}', style: AppTextStyles.cardContent),
+                      Text('Emisiones: ${_emisionVE?.toStringAsFixed(1) ?? "--"} kg CO₂', style: AppTextStyles.cardContent),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Gasolina', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                      Text('Costo estimado: ₡${_costoGasolina?.toStringAsFixed(0) ?? "--"}', style: AppTextStyles.cardContent),
+                      Text('Emisiones: ${_emisionGasolina?.toStringAsFixed(1) ?? "--"} kg CO₂', style: AppTextStyles.cardContent),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_reduccionCO2 != null)
+              Row(
+                children: [
+                  const Icon(Icons.eco, color: Colors.green, size: 20),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Reducción de emisiones: ${_reduccionCO2!.toStringAsFixed(1)} kg CO₂',
+                    style: AppTextStyles.cardContent.copyWith(color: Colors.green),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 4),
+            Text(
+              'Distancia total: ${distanciaKm.toStringAsFixed(1)} km',
+              style: AppTextStyles.cardContent.copyWith(fontSize: 13, color: AppColors.textColor.withOpacity(0.7)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalculadoraParametros() {
+    // Widget para editar los parámetros de la calculadora
+    return ExpansionTile(
+      title: Text('Parámetros de la calculadora', style: AppTextStyles.subtitle),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text('Consumo VE (kWh/100km)', style: AppTextStyles.cardContent)),
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      initialValue: _consumoVE_kWh_100km.toString(),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (v) {
+                        final val = double.tryParse(v);
+                        if (val != null && val > 0) setState(() => _consumoVE_kWh_100km = val);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(child: Text('Precio kWh (₡)', style: AppTextStyles.cardContent)),
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      initialValue: _precioKWh.toString(),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (v) {
+                        final val = double.tryParse(v);
+                        if (val != null && val > 0) setState(() => _precioKWh = val);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(child: Text('Consumo gasolina (L/100km)', style: AppTextStyles.cardContent)),
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      initialValue: _consumoGasolina_L_100km.toString(),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (v) {
+                        final val = double.tryParse(v);
+                        if (val != null && val > 0) setState(() => _consumoGasolina_L_100km = val);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(child: Text('Precio gasolina (₡/L)', style: AppTextStyles.cardContent)),
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      initialValue: _precioGasolina_L.toString(),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (v) {
+                        final val = double.tryParse(v);
+                        if (val != null && val > 0) setState(() => _precioGasolina_L = val);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(child: Text('Emisión gasolina (kg CO₂/L)', style: AppTextStyles.cardContent)),
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      initialValue: _emisionCO2_L.toString(),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (v) {
+                        final val = double.tryParse(v);
+                        if (val != null && val > 0) setState(() => _emisionCO2_L = val);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(child: Text('Emisión VE (kg CO₂/kWh)', style: AppTextStyles.cardContent)),
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      initialValue: _emisionCO2_kWh.toString(),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (v) {
+                        final val = double.tryParse(v);
+                        if (val != null && val >= 0) setState(() => _emisionCO2_kWh = val);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResultado() {
+    if (!_mostrarResultado) return const SizedBox.shrink();
+    print('Polylines enviadas a StyledMap: ${_polylines.length}');
+
+    // Calcular distancia total de la ruta para la calculadora
+    double distanciaKm = 0.0;
+    final puntos = _polylines.isNotEmpty ? _polylines.first.points : [];
+    for (int i = 0; i < puntos.length - 1; i++) {
+      distanciaKm += _distanceKm(
+        puntos[i].latitude, puntos[i].longitude,
+        puntos[i + 1].latitude, puntos[i + 1].longitude,
+      );
+    }
+    // Ejecutar cálculo de costos/emisiones
+    _calcularCostosYEmisiones(distanciaKm);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Ruta planificada'),
         Container(
           height: 500,
           width: double.infinity,
@@ -859,8 +1293,11 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
         ),
         const SizedBox(height: 8),
         Text('Estaciones sugeridas:', style: AppTextStyles.subtitle),
-        SizedBox(
-          height: 220, // Limita la altura para evitar overflow
+        ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxHeight: 220,
+            minHeight: 0,
+          ),
           child: ListView.builder(
             shrinkWrap: true,
             physics: const AlwaysScrollableScrollPhysics(),
@@ -870,68 +1307,67 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
               final esPrioritaria = _idsEstacionesPrioritarias.contains(estacion.id);
               final distancia = _distanciasEstaciones[estacion.id] ?? 0.0;
               return Card(
-                color: esPrioritaria ? AppColors.purpleAccent.withOpacity(0.25) : AppColors.darkCard,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: esPrioritaria
-                      ? BorderSide(color: AppColors.purpleAccent, width: 2)
-                      : BorderSide.none,
+          color: esPrioritaria ? AppColors.purpleAccent.withOpacity(0.25) : AppColors.darkCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: esPrioritaria
+                ? BorderSide(color: AppColors.purpleAccent, width: 2)
+                : BorderSide.none,
+          ),
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          child: ListTile(
+            leading: Icon(
+              Icons.ev_station,
+              color: esPrioritaria ? AppColors.purpleAccent : AppColors.purplePrimary,
+            ),
+            title: Row(
+              children: [
+                Expanded(
+            child: Text(
+              estacion.nombre,
+              style: AppTextStyles.cardContent,
+              overflow: TextOverflow.ellipsis,
+            ),
                 ),
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.ev_station,
-                    color: esPrioritaria ? AppColors.purpleAccent : AppColors.purplePrimary,
-                  ),
-                  title: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          estacion.nombre,
-                          style: AppTextStyles.cardContent,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (esPrioritaria)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8.0),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.purpleAccent,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Prioritaria',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  subtitle: Text(
-                    'Distancia en ruta: ${distancia.toStringAsFixed(1)} km\n'
-                    'Enchufe: ${estacion.tipoEnchufe ?? "N/A"}\n'
-                    'Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}\n'
-                    'Disponible: ${estacion.disponible ? "Sí" : "No"}',
-                    style: AppTextStyles.cardContent.copyWith(fontSize: 13),
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.share, color: AppColors.purpleAccent),
-                    onPressed: () {},
-                    tooltip: 'Compartir',
-                  ),
-                  onTap: () => _showEstacionDialog(context, estacion),
+                if (esPrioritaria)
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.purpleAccent,
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: const Text(
+                  'Prioritaria',
+                  style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+              ],
+            ),
+            subtitle: Text(
+              'Distancia en ruta: ${distancia.toStringAsFixed(1)} km\n'
+              'Enchufe: ${estacion.tipoEnchufe ?? "N/A"}\n'
+              'Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}\n'
+              'Disponible: ${estacion.disponible ? "Sí" : "No"}',
+              style: AppTextStyles.cardContent.copyWith(fontSize: 13),
+            ),
+            onTap: () => _showEstacionDialog(context, estacion),
+          ),
               );
             },
           ),
         ),
         const SizedBox(height: 12),
+        // --- NUEVO: Parámetros editables ---
+        _buildCalculadoraParametros(),
+        // --- NUEVO: Calculadora de costos y emisiones ---
+        _buildCalculadoraCostosEmisiones(distanciaKm),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -948,22 +1384,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
               ),
               icon: const Icon(Icons.save),
               label: const Text('Guardar ruta'),
-              onPressed: () {},
-            ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.purpleAccent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              icon: const Icon(Icons.share),
-              label: const Text('Compartir'),
-              onPressed: () {},
+              onPressed: _guardarRuta,
             ),
           ],
         ),
@@ -1019,6 +1440,15 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                       vertical: 20,
                     ),
                     child: _buildPreferenciasCarga(),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: AppDecorations.card(opacity: 0.96),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 20,
+                    ),
+                    child: _buildFechaSelector(),
                   ),
                   if (_mostrarResultado)
                     Container(

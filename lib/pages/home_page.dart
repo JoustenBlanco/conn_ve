@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../shared/styles/app_colors.dart';
 import 'mapa_page.dart';
-import 'viajes_rutas_page.dart';
+import 'viajes_lista_page.dart';
 import 'comunidad_page.dart';
 import 'perfil_page.dart';
 
@@ -17,7 +17,7 @@ class _HomePageState extends State<HomePage> {
 
   static final List<Widget> _pages = <Widget>[
     MapaPage(),
-    ViajesRutasPage(),
+    ViajesListaPage(),
     ComunidadPage(),
     PerfilPage(),
   ];
