@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../shared/styles/app_colors.dart';
 import '../shared/styles/app_text_styles.dart';
 import '../shared/styles/app_decorations.dart';
+import '../services/estaciones_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EstacionesList extends StatefulWidget {
   const EstacionesList({super.key});
@@ -14,131 +16,223 @@ class _EstacionesListState extends State<EstacionesList> {
   String filtro = 'Mejor calificación';
   final List<String> filtros = [
     'Mejor calificación',
-    'Más cercanas',
     'Más reseñas',
   ];
 
-  final List<Estacion> estaciones = const [
-    Estacion(
-      nombre: 'Estación UNA Heredia',
-      direccion: 'Heredia, Costa Rica',
-      puntuacion: 4.8,
-      review: 'Excelente precisión y fácil acceso a los datos.',
-    ),
-    Estacion(
-      nombre: 'Estación Davis San José',
-      direccion: 'San José centro',
-      puntuacion: 4.3,
-      review: 'La información en tiempo real es muy útil.',
-    ),
-    Estacion(
-      nombre: 'Estación Cartago Norte',
-      direccion: 'Cartago, barrio Los Ángeles',
-      puntuacion: 3.9,
-      review: 'Buena, aunque a veces pierde conexión.',
-    ),
-  ];
+  late Future<List<EstacionCarga>> _estacionesFuture;
+  String _busqueda = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _estacionesFuture = EstacionesService.obtenerEstaciones();
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _estacionesFuture = EstacionesService.obtenerEstaciones();
+    });
+  }
+
+  void _showCalificarDialog(EstacionCarga estacion, ComentarioEstacion? comentarioActual, VoidCallback onDone) async {
+    await showDialog(
+      context: context,
+      builder: (context) => CalificarEstacionDialog(
+        estacion: estacion,
+        comentarioActual: comentarioActual,
+        onDone: onDone,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              const Icon(Icons.filter_list, color: AppColors.purpleAccent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: DropdownButton<String>(
-                  value: filtro,
-                  dropdownColor: AppColors.darkCard,
-                  style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
-                  iconEnabledColor: AppColors.purpleAccent,
-                  borderRadius: BorderRadius.circular(18),
-                  isExpanded: true,
-                  items: filtros.map((f) => DropdownMenuItem(
-                    value: f,
-                    child: Text(f),
-                  )).toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => filtro = val);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            itemCount: estaciones.length,
-            itemBuilder: (context, index) {
-              final est = estaciones[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 18),
-                decoration: AppDecorations.card(opacity: 0.97),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                        leading: Icon(Icons.location_on, color: AppColors.purpleAccent, size: 32),
-                        title: Text(est.nombre, style: AppTextStyles.cardContent.copyWith(fontSize: 18)),
-                        subtitle: Text(est.direccion, style: AppTextStyles.subtitle.copyWith(fontSize: 14)),
-                        trailing: _StarRating(est.puntuacion),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.format_quote, color: AppColors.hintColor, size: 18),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                '"${est.review}"',
-                                style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor, fontStyle: FontStyle.italic),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12, right: 12, bottom: 10, top: 2),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton.icon(
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.purpleAccent,
-                                textStyle: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              icon: const Icon(Icons.info_outline),
-                              label: const Text('Ver detalles'),
-                              onPressed: () {},
-                            ),
-                            const SizedBox(width: 6),
-                            TextButton.icon(
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.purpleAccent,
-                                textStyle: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              icon: const Icon(Icons.rate_review_outlined),
-                              label: const Text('Dejar review'),
-                              onPressed: () {},
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+    return FutureBuilder<List<EstacionCarga>>(
+      future: _estacionesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final estaciones = snapshot.data ?? [];
+        // Filtro de búsqueda
+        List<EstacionCarga> estacionesFiltradas = estaciones.where((e) =>
+          e.nombre.toLowerCase().contains(_busqueda.trim().toLowerCase())
+        ).toList();
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_list, color: AppColors.purpleAccent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButton<String>(
+                      value: filtro,
+                      dropdownColor: AppColors.darkCard,
+                      style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
+                      iconEnabledColor: AppColors.purpleAccent,
+                      borderRadius: BorderRadius.circular(18),
+                      isExpanded: true,
+                      items: filtros.map((f) => DropdownMenuItem(
+                        value: f,
+                        child: Text(f),
+                      )).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            filtro = val;
+                          });
+                        }
+                      },
+                    ),
                   ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Buscar estación por nombre',
+                  prefixIcon: const Icon(Icons.search, color: AppColors.purpleAccent),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                 ),
-              );
-            },
-          ),
-        ),
-      ],
+                onChanged: (val) => setState(() => _busqueda = val),
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<List<List<ComentarioEstacion>>>(
+                future: Future.wait(estacionesFiltradas.map((e) => EstacionesService.obtenerComentariosDeEstacion(e.id)).toList()),
+                builder: (context, snapComentariosList) {
+                  if (snapComentariosList.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapComentariosList.hasError) {
+                    return Center(child: Text('Error: ${snapComentariosList.error}'));
+                  }
+                  final comentariosPorEstacion = snapComentariosList.data ?? List.generate(estacionesFiltradas.length, (_) => <ComentarioEstacion>[]);
+
+                  // Ordenar estacionesFiltradas según filtro y comentariosPorEstacion
+                  List<MapEntry<EstacionCarga, List<ComentarioEstacion>>> estacionesConComentarios = List.generate(
+                    estacionesFiltradas.length,
+                    (i) => MapEntry(estacionesFiltradas[i], comentariosPorEstacion[i]),
+                  );
+
+                  if (filtro == 'Mejor calificación') {
+                    estacionesConComentarios.sort((a, b) {
+                      final pa = a.value.isEmpty ? 0 : a.value.map((c) => c.calificacion).reduce((x, y) => x + y) / a.value.length;
+                      final pb = b.value.isEmpty ? 0 : b.value.map((c) => c.calificacion).reduce((x, y) => x + y) / b.value.length;
+                      return pb.compareTo(pa);
+                    });
+                  } else if (filtro == 'Más reseñas') {
+                    estacionesConComentarios.sort((a, b) => b.value.length.compareTo(a.value.length));
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    itemCount: estacionesConComentarios.length,
+                    itemBuilder: (context, index) {
+                      final est = estacionesConComentarios[index].key;
+                      final comentarios = estacionesConComentarios[index].value;
+                      final double promedio = comentarios.isEmpty
+                          ? 0
+                          : comentarios.map((c) => c.calificacion).reduce((a, b) => a + b) / comentarios.length;
+                      final int cantidad = comentarios.length;
+
+                      return FutureBuilder<ComentarioEstacion?>(
+                        future: EstacionesService.obtenerComentarioUsuarioActual(est.id),
+                        builder: (context, snapMiComentario) {
+                          final miComentario = snapMiComentario.data;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 18),
+                            decoration: AppDecorations.card(opacity: 0.97),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(32),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ListTile(
+                                    leading: Icon(Icons.location_on, color: AppColors.purpleAccent, size: 32),
+                                    title: Text(est.nombre, style: AppTextStyles.cardContent.copyWith(fontSize: 18)),
+                                    subtitle: Text(
+                                      '${cantidad > 0 ? promedio.toStringAsFixed(1) : 'Sin calificación'} (${cantidad} reseñas)',
+                                      style: AppTextStyles.subtitle.copyWith(fontSize: 14),
+                                    ),
+                                    trailing: _StarRating(promedio),
+                                  ),
+                                  if (comentarios.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.format_quote, color: AppColors.hintColor, size: 18),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              '"${comentarios.first.comentario}" - ${comentarios.first.nombreUsuario ?? ''}',
+                                              style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor, fontStyle: FontStyle.italic),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 12, right: 12, bottom: 10, top: 2),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        TextButton.icon(
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: AppColors.purpleAccent,
+                                            textStyle: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold),
+                                          ),
+                                          icon: const Icon(Icons.info_outline),
+                                          label: const Text('Ver detalles'),
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => VerComentariosDialog(
+                                                comentarios: comentarios,
+                                                estacion: est,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(width: 6),
+                                        TextButton.icon(
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: AppColors.purpleAccent,
+                                            textStyle: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold),
+                                          ),
+                                          icon: const Icon(Icons.rate_review_outlined),
+                                          label: Text(miComentario == null ? 'Dejar review' : 'Editar review'),
+                                          onPressed: () {
+                                            _showCalificarDialog(est, miComentario, _refresh);
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -175,6 +269,156 @@ class _StarRating extends StatelessWidget {
           return const Icon(Icons.star_border, color: Colors.amber, size: 20);
         }
       }),
+    );
+  }
+}
+
+class CalificarEstacionDialog extends StatefulWidget {
+  final EstacionCarga estacion;
+  final ComentarioEstacion? comentarioActual;
+  final VoidCallback onDone;
+  const CalificarEstacionDialog({
+    required this.estacion,
+    required this.comentarioActual,
+    required this.onDone,
+  });
+
+  @override
+  State<CalificarEstacionDialog> createState() => _CalificarEstacionDialogState();
+}
+
+class _CalificarEstacionDialogState extends State<CalificarEstacionDialog> {
+  int _calificacion = 5;
+  late TextEditingController _comentarioCtrl;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _calificacion = widget.comentarioActual?.calificacion ?? 5;
+    _comentarioCtrl = TextEditingController(text: widget.comentarioActual?.comentario ?? '');
+  }
+
+  Future<void> _guardar() async {
+    setState(() => _loading = true);
+    try {
+      await EstacionesService.crearOActualizarComentario(
+        idEstacion: widget.estacion.id,
+        calificacion: _calificacion,
+        comentario: _comentarioCtrl.text.trim(),
+      );
+      widget.onDone();
+      Navigator.of(context).pop();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Calificar "${widget.estacion.nombre}"'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: List.generate(5, (i) => IconButton(
+              icon: Icon(
+                i < _calificacion ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+              ),
+              onPressed: _loading ? null : () => setState(() => _calificacion = i + 1),
+            )),
+          ),
+          TextField(
+            controller: _comentarioCtrl,
+            minLines: 1,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Comentario',
+              border: OutlineInputBorder(),
+            ),
+            enabled: !_loading,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        ElevatedButton(
+          onPressed: _loading ? null : _guardar,
+          child: _loading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+class VerComentariosDialog extends StatelessWidget {
+  final List<ComentarioEstacion> comentarios;
+  final EstacionCarga? estacion;
+  const VerComentariosDialog({required this.comentarios, this.estacion});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Container(
+        width: 500,
+        height: 450,
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              estacion != null ? 'Reseñas de "${estacion!.nombre}"' : 'Reseñas',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: comentarios.isEmpty
+                  ? const Center(child: Text('No hay reseñas aún.'))
+                  : Scrollbar(
+                      thumbVisibility: true,
+                      child: ListView.separated(
+                        itemCount: comentarios.length,
+                        separatorBuilder: (_, __) => const Divider(height: 16),
+                        itemBuilder: (context, idx) {
+                          final c = comentarios[idx];
+                          return ListTile(
+                            leading: CircleAvatar(child: Text(c.nombreUsuario != null && c.nombreUsuario!.isNotEmpty ? c.nombreUsuario![0] : '?')),
+                            title: Text(c.nombreUsuario ?? ''),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _StarRating(c.calificacion.toDouble()),
+                                const SizedBox(height: 2),
+                                Text(
+                                  c.comentario,
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                              ],
+                            ),
+                            trailing: Text('${c.fecha.day}/${c.fecha.month}/${c.fecha.year}', style: const TextStyle(fontSize: 11)),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                          );
+                        },
+                      ),
+                    ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cerrar'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
