@@ -1,11 +1,22 @@
-import 'pages/login_register_page.dart';
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'pages/home_page.dart';
-import 'services/auth_service.dart';
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:conn_ve/pages/login_register_page.dart';
+import 'package:conn_ve/services/auth_service.dart';
+import 'package:conn_ve/pages/home_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp();
+  // Inicializar FCM
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  // Pedir permiso en iOS (en Android normalmente se habilita por defecto)
+  await messaging.requestPermission();
+  // Obtener token del dispositivo
+  String? token = await messaging.getToken();
+  print('FCM Token: $token');
 
   await Supabase.initialize(
     url: 'https://wwjvnuopafqmvsolrofm.supabase.co',
