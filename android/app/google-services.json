@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "294799224292",
+    "project_id": "connected-vehicles-511b4",
+    "storage_bucket": "connected-vehicles-511b4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:294799224292:android:8f93c091ec584a1164ebf1",
+        "android_client_info": {
+          "package_name": "com.connve.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpYjgAJ7zGyLGLICHmukeTaH0ZIcicwfg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

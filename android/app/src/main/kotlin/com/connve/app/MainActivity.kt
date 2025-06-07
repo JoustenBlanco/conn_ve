@@ -1,4 +1,4 @@
-package com.example.conn_ve
+package com.connve.app
 
 import io.flutter.embedding.android.FlutterActivity
 
