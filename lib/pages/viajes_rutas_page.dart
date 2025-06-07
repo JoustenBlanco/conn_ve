@@ -37,7 +37,8 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   String? _errorMapa;
   GoogleMapController? _mapController;
   List<EstacionCarga> _estacionesSugeridas = [];
-  List<EstacionCarga> _todasEstaciones = []; // Para guardar todas las estaciones
+  List<EstacionCarga> _todasEstaciones =
+      []; // Para guardar todas las estaciones
 
   Set<Polyline> _polylines = {};
 
@@ -51,7 +52,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       "featureType": "water",
       "elementType": "geometry",
       "stylers": [
-        { "color": "#4B176A" }
+        { "color": "#2D1856" }
       ]
     },
     {
@@ -65,22 +66,22 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       "featureType": "road",
       "elementType": "geometry",
       "stylers": [
-        { "color": "#7B1FA2" },
-        { "lightness": -20 }
+        { "color": "#8F5AFF" },
+        { "lightness": -10 }
       ]
     },
     {
       "featureType": "poi",
       "elementType": "geometry",
       "stylers": [
-        { "color": "#2A1946" }
+        { "color": "#221C3A" }
       ]
     },
     {
       "featureType": "transit",
       "elementType": "geometry",
       "stylers": [
-        { "color": "#B388FF" }
+        { "color": "#D1B3FF" }
       ]
     },
     {
@@ -95,7 +96,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     {
       "elementType": "labels.text.fill",
       "stylers": [
-        { "color": "#ffffff" }
+        { "color": "#F8F8FF" }
       ]
     },
     {
@@ -103,7 +104,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       "elementType": "geometry",
       "stylers": [
         { "weight": 0.6 },
-        { "color": "#7B1FA2" }
+        { "color": "#8F5AFF" }
       ]
     },
     {
@@ -117,6 +118,20 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       "elementType": "geometry",
       "stylers": [
         { "color": "#23232B" }
+      ]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#B388FF" }
+      ]
+    },
+    {
+      "featureType": "road.arterial",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#7B1FA2" }
       ]
     }
   ]
@@ -161,9 +176,12 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     _autonomia = ruta.autonomiaKm.toDouble();
     _autonomiaManualController.text = ruta.autonomiaKm.toString();
     _usarSlider = true;
-    _tipoCargador = ruta.preferenciaCarga == null
-        ? null
-        : (ruta.preferenciaCarga!.toLowerCase().contains('rápido') ? 'rapido' : 'estandar');
+    _tipoCargador =
+        ruta.preferenciaCarga == null
+            ? null
+            : (ruta.preferenciaCarga!.toLowerCase().contains('rápido')
+                ? 'rapido'
+                : 'estandar');
     _marcasCompatibles = ruta.marcasCompatibles.toSet();
     _fechaProgramada = ruta.fechaProgramada;
 
@@ -181,21 +199,23 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
 
     // Filtrar estaciones sugeridas por id
     final idsEstaciones = ruta.estaciones.map((e) => e['id'] as int).toSet();
-    final sugeridas = _todasEstaciones.where((e) => idsEstaciones.contains(e.id)).toList();
+    final sugeridas =
+        _todasEstaciones.where((e) => idsEstaciones.contains(e.id)).toList();
 
     // Calcular distancias y prioritarias
-    final List<Map<String, dynamic>> estacionesConDistancia = sugeridas.map((e) {
-      final dist = _distanciaEnRutaHastaEstacion(
-        routeCoords.isNotEmpty ? routeCoords.first : origenLatLng,
-        e,
-        routeCoords,
-      );
-      return {
-        'estacion': e,
-        'distancia': dist,
-        'prioritaria': dist <= _autonomia,
-      };
-    }).toList();
+    final List<Map<String, dynamic>> estacionesConDistancia =
+        sugeridas.map((e) {
+          final dist = _distanciaEnRutaHastaEstacion(
+            routeCoords.isNotEmpty ? routeCoords.first : origenLatLng,
+            e,
+            routeCoords,
+          );
+          return {
+            'estacion': e,
+            'distancia': dist,
+            'prioritaria': dist <= _autonomia,
+          };
+        }).toList();
 
     estacionesConDistancia.sort((a, b) {
       if (a['prioritaria'] && !b['prioritaria']) return -1;
@@ -203,10 +223,18 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       return (a['distancia'] as double).compareTo(b['distancia'] as double);
     });
 
-    final sugeridasOrdenadas = estacionesConDistancia.map((e) => e['estacion'] as EstacionCarga).toList();
-    final idsPrioritarias = estacionesConDistancia.where((e) => e['prioritaria']).map((e) => (e['estacion'] as EstacionCarga).id).toSet();
+    final sugeridasOrdenadas =
+        estacionesConDistancia
+            .map((e) => e['estacion'] as EstacionCarga)
+            .toList();
+    final idsPrioritarias =
+        estacionesConDistancia
+            .where((e) => e['prioritaria'])
+            .map((e) => (e['estacion'] as EstacionCarga).id)
+            .toSet();
     final distanciasEstaciones = {
-      for (var e in estacionesConDistancia) (e['estacion'] as EstacionCarga).id: e['distancia'] as double
+      for (var e in estacionesConDistancia)
+        (e['estacion'] as EstacionCarga).id: e['distancia'] as double,
     };
 
     setState(() {
@@ -270,7 +298,8 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   // Utilidad para obtener coordenadas desde una dirección usando Geocoding API
   Future<LatLng?> _getLatLngFromAddress(String address) async {
     if (address.isEmpty) return null;
-    if (address.toLowerCase() == 'ubicación actual' && _currentPosition != null) {
+    if (address.toLowerCase() == 'ubicación actual' &&
+        _currentPosition != null) {
       return LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
     }
     final url =
@@ -281,7 +310,8 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
 
     // Manejo de errores de autorización
     if (data['status'] == 'REQUEST_DENIED') {
-      final errorMsg = data['error_message'] ?? 'API Key no autorizada para Geocoding.';
+      final errorMsg =
+          data['error_message'] ?? 'API Key no autorizada para Geocoding.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error de Google Maps: $errorMsg')),
       );
@@ -289,19 +319,26 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       return null;
     }
 
-    if (data['status'] == 'OK' && data['results'] != null && data['results'].isNotEmpty) {
+    if (data['status'] == 'OK' &&
+        data['results'] != null &&
+        data['results'].isNotEmpty) {
       final location = data['results'][0]['geometry']['location'];
       return LatLng(location['lat'], location['lng']);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo encontrar la dirección: "$address"')),
+        SnackBar(
+          content: Text('No se pudo encontrar la dirección: "$address"'),
+        ),
       );
     }
     return null;
   }
 
   // Utilidad para obtener la ruta entre dos puntos usando Directions API
-  Future<List<LatLng>> _getRouteCoordinates(LatLng origin, LatLng destination) async {
+  Future<List<LatLng>> _getRouteCoordinates(
+    LatLng origin,
+    LatLng destination,
+  ) async {
     final url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=$_googleApiKey';
     final response = await http.get(Uri.parse(url));
@@ -352,31 +389,52 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     const R = 6371; // Radio de la tierra en km
     final dLat = (lat2 - lat1) * pi / 180.0;
     final dLon = (lon2 - lon1) * pi / 180.0;
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180.0) * cos(lat2 * pi / 180.0) *
-        sin(dLon / 2) * sin(dLon / 2);
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180.0) *
+            cos(lat2 * pi / 180.0) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
   }
 
   // Retorna true si la estación está cerca de la ruta (a menos de X km de algún punto)
-  bool _estaCercaDeRuta(EstacionCarga estacion, List<LatLng> ruta, {double maxDistKm = 10.0}) {
+  bool _estaCercaDeRuta(
+    EstacionCarga estacion,
+    List<LatLng> ruta, {
+    double maxDistKm = 10.0,
+  }) {
     for (final punto in ruta) {
-      final dist = _distanceKm(estacion.latitud, estacion.longitud, punto.latitude, punto.longitude);
+      final dist = _distanceKm(
+        estacion.latitud,
+        estacion.longitud,
+        punto.latitude,
+        punto.longitude,
+      );
       if (dist <= maxDistKm) return true;
     }
     return false;
   }
 
   // Calcula la distancia en ruta desde el origen hasta el punto más cercano a la estación
-  double _distanciaEnRutaHastaEstacion(LatLng origen, EstacionCarga estacion, List<LatLng> ruta) {
+  double _distanciaEnRutaHastaEstacion(
+    LatLng origen,
+    EstacionCarga estacion,
+    List<LatLng> ruta,
+  ) {
     if (ruta.isEmpty) return 0.0;
     double distancia = 0.0;
     double minDist = double.infinity;
     int idxMasCercano = 0;
     for (int i = 0; i < ruta.length; i++) {
       final punto = ruta[i];
-      final dist = _distanceKm(punto.latitude, punto.longitude, estacion.latitud, estacion.longitud);
+      final dist = _distanceKm(
+        punto.latitude,
+        punto.longitude,
+        estacion.latitud,
+        estacion.longitud,
+      );
       if (dist < minDist) {
         minDist = dist;
         idxMasCercano = i;
@@ -384,10 +442,20 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     }
     // Suma la distancia desde el origen hasta el punto más cercano
     for (int i = 0; i < idxMasCercano; i++) {
-      distancia += _distanceKm(ruta[i].latitude, ruta[i].longitude, ruta[i + 1].latitude, ruta[i + 1].longitude);
+      distancia += _distanceKm(
+        ruta[i].latitude,
+        ruta[i].longitude,
+        ruta[i + 1].latitude,
+        ruta[i + 1].longitude,
+      );
     }
     // Suma la distancia desde el punto más cercano hasta la estación
-    distancia += _distanceKm(ruta[idxMasCercano].latitude, ruta[idxMasCercano].longitude, estacion.latitud, estacion.longitud);
+    distancia += _distanceKm(
+      ruta[idxMasCercano].latitude,
+      ruta[idxMasCercano].longitude,
+      estacion.latitud,
+      estacion.longitud,
+    );
     return distancia;
   }
 
@@ -395,7 +463,14 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   final Map<String, List<String>> _marcasEnchufe = const {
     'Tesla': ['Tesla', 'Tipo 2', 'CCS Combo 2', 'Supercharger'],
     'ChargePoint': ['Tipo 1', 'Tipo 2', 'CCS', 'CHAdeMO'],
-    'Otro': ['Tipo 1', 'Tipo 2', 'CCS Combo 2', 'CHAdeMO', 'Tesla', 'Supercharger'],
+    'Otro': [
+      'Tipo 1',
+      'Tipo 2',
+      'CCS Combo 2',
+      'CHAdeMO',
+      'Tesla',
+      'Supercharger',
+    ],
   };
 
   // Determina si la estación es carga rápida o estándar
@@ -429,7 +504,9 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     }
     if (_marcasCompatibles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona al menos una marca compatible')),
+        const SnackBar(
+          content: Text('Selecciona al menos una marca compatible'),
+        ),
       );
       return;
     }
@@ -468,14 +545,24 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     for (final estacion in _todasEstaciones) {
       double minDist = double.infinity;
       for (final punto in routeCoords) {
-        final dist = _distanceKm(estacion.latitud, estacion.longitud, punto.latitude, punto.longitude);
+        final dist = _distanceKm(
+          estacion.latitud,
+          estacion.longitud,
+          punto.latitude,
+          punto.longitude,
+        );
         if (dist < minDist) minDist = dist;
       }
-      print('DEBUG: Estación ${estacion.nombre} (id:${estacion.id}) minDist a ruta: $minDist km');
+      print(
+        'DEBUG: Estación ${estacion.nombre} (id:${estacion.id}) minDist a ruta: $minDist km',
+      );
     }
 
     // Filtrar estaciones cercanas a la ruta
-    List<EstacionCarga> sugeridas = _todasEstaciones.where((e) => _estaCercaDeRuta(e, routeCoords)).toList();
+    List<EstacionCarga> sugeridas =
+        _todasEstaciones
+            .where((e) => _estaCercaDeRuta(e, routeCoords))
+            .toList();
 
     // --- FILTRO POR PREFERENCIAS DE CARGA ---
     // Filtrar por tipo de cargador (potencia)
@@ -491,27 +578,31 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       for (final marca in _marcasCompatibles) {
         tiposCompatibles.addAll(_marcasEnchufe[marca] ?? []);
       }
-      sugeridas = sugeridas.where((e) {
-        final tipo = (e.tipoEnchufe ?? '').toLowerCase();
-        return tiposCompatibles.any((t) => tipo.contains(t.toLowerCase()));
-      }).toList();
+      sugeridas =
+          sugeridas.where((e) {
+            final tipo = (e.tipoEnchufe ?? '').toLowerCase();
+            return tiposCompatibles.any((t) => tipo.contains(t.toLowerCase()));
+          }).toList();
     }
 
-    print('DEBUG: Estaciones sugeridas tras filtros preferencias: ${sugeridas.length}');
+    print(
+      'DEBUG: Estaciones sugeridas tras filtros preferencias: ${sugeridas.length}',
+    );
 
     // --- ORDENAR POR PRIORIDAD SEGÚN AUTONOMÍA ---
-    final List<Map<String, dynamic>> estacionesConDistancia = sugeridas.map((e) {
-      final dist = _distanciaEnRutaHastaEstacion(
-        routeCoords.isNotEmpty ? routeCoords.first : origenLatLng,
-        e,
-        routeCoords,
-      );
-      return {
-        'estacion': e,
-        'distancia': dist,
-        'prioritaria': dist <= _autonomia,
-      };
-    }).toList();
+    final List<Map<String, dynamic>> estacionesConDistancia =
+        sugeridas.map((e) {
+          final dist = _distanciaEnRutaHastaEstacion(
+            routeCoords.isNotEmpty ? routeCoords.first : origenLatLng,
+            e,
+            routeCoords,
+          );
+          return {
+            'estacion': e,
+            'distancia': dist,
+            'prioritaria': dist <= _autonomia,
+          };
+        }).toList();
 
     estacionesConDistancia.sort((a, b) {
       if (a['prioritaria'] && !b['prioritaria']) return -1;
@@ -519,10 +610,18 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       return (a['distancia'] as double).compareTo(b['distancia'] as double);
     });
 
-    final List<EstacionCarga> sugeridasOrdenadas = estacionesConDistancia.map((e) => e['estacion'] as EstacionCarga).toList();
-    final Set<int> idsPrioritarias = estacionesConDistancia.where((e) => e['prioritaria']).map((e) => (e['estacion'] as EstacionCarga).id).toSet();
+    final List<EstacionCarga> sugeridasOrdenadas =
+        estacionesConDistancia
+            .map((e) => e['estacion'] as EstacionCarga)
+            .toList();
+    final Set<int> idsPrioritarias =
+        estacionesConDistancia
+            .where((e) => e['prioritaria'])
+            .map((e) => (e['estacion'] as EstacionCarga).id)
+            .toSet();
     final Map<int, double> distanciasEstaciones = {
-      for (var e in estacionesConDistancia) (e['estacion'] as EstacionCarga).id: e['distancia'] as double
+      for (var e in estacionesConDistancia)
+        (e['estacion'] as EstacionCarga).id: e['distancia'] as double,
     };
 
     print('DEBUG: Estaciones prioritarias: $idsPrioritarias');
@@ -549,7 +648,8 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   double _consumoGasolina_L_100km = 8.5; // L/100km
   double _precioGasolina_L = 800.0; // CRC por litro
   double _emisionCO2_L = 2.31; // kg CO2 por litro gasolina
-  double _emisionCO2_kWh = 0.35; // kg CO2 por kWh (opcional, Costa Rica es bajo)
+  double _emisionCO2_kWh =
+      0.35; // kg CO2 por kWh (opcional, Costa Rica es bajo)
 
   // Resultados de la calculadora
   double? _costoVE;
@@ -586,8 +686,10 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       final puntos = _polylines.isNotEmpty ? _polylines.first.points : [];
       for (int i = 0; i < puntos.length - 1; i++) {
         distanciaKm += _distanceKm(
-          puntos[i].latitude, puntos[i].longitude,
-          puntos[i + 1].latitude, puntos[i + 1].longitude,
+          puntos[i].latitude,
+          puntos[i].longitude,
+          puntos[i + 1].latitude,
+          puntos[i + 1].longitude,
         );
       }
 
@@ -595,24 +697,35 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
       _calcularCostosYEmisiones(distanciaKm);
 
       // Serializar estaciones sugeridas (solo info relevante)
-      final estacionesJson = _estacionesSugeridas.map((e) => {
-        'id': e.id,
-        'nombre': e.nombre,
-        'latitud': e.latitud,
-        'longitud': e.longitud,
-        'tipo_enchufe': e.tipoEnchufe,
-        'potencia_kw': e.potenciaKw,
-        'tarifa': e.tarifa,
-        'disponible': e.disponible,
-      }).toList();
+      final estacionesJson =
+          _estacionesSugeridas
+              .map(
+                (e) => {
+                  'id': e.id,
+                  'nombre': e.nombre,
+                  'latitud': e.latitud,
+                  'longitud': e.longitud,
+                  'tipo_enchufe': e.tipoEnchufe,
+                  'potencia_kw': e.potenciaKw,
+                  'tarifa': e.tarifa,
+                  'disponible': e.disponible,
+                },
+              )
+              .toList();
 
       // Obtener coordenadas de origen y destino
-      LatLng? origenLatLng = await _getLatLngFromAddress(_origenController.text.trim());
+      LatLng? origenLatLng = await _getLatLngFromAddress(
+        _origenController.text.trim(),
+      );
       LatLng? destinoLatLng = _destinoLatLng;
 
       if (origenLatLng == null || destinoLatLng == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudieron obtener las coordenadas de origen o destino')),
+          const SnackBar(
+            content: Text(
+              'No se pudieron obtener las coordenadas de origen o destino',
+            ),
+          ),
         );
         return;
       }
@@ -623,9 +736,10 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
         distanciaKm: distanciaKm,
         estaciones: estacionesJson,
         autonomiaKm: _autonomia.round(),
-        preferenciaCarga: _tipoCargador == null
-            ? null
-            : (_tipoCargador == 'rapido' ? 'Rápido' : 'Estándar'),
+        preferenciaCarga:
+            _tipoCargador == null
+                ? null
+                : (_tipoCargador == 'rapido' ? 'Rápido' : 'Estándar'),
         marcasCompatibles: _marcasCompatibles.toList(),
         fechaProgramada: _fechaProgramada ?? DateTime.now(),
         origenLatitud: origenLatLng.latitude,
@@ -637,9 +751,9 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
         const SnackBar(content: Text('Ruta guardada exitosamente')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar ruta: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al guardar ruta: $e')));
     }
   }
 
@@ -669,7 +783,9 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
           markerId: const MarkerId('origen'),
           position: origen,
           infoWindow: const InfoWindow(title: 'Origen'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed), // Morado accent
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueRed,
+          ), // Morado accent
         ),
       );
     }
@@ -684,7 +800,9 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
             title: e.nombre,
             snippet: 'Toca para ver detalles',
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueViolet,
+          ),
           onTap: () {
             _showEstacionDialog(context, e);
           },
@@ -710,37 +828,63 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   void _showEstacionDialog(BuildContext context, EstacionCarga estacion) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: Text(
-          estacion.nombre,
-          style: AppTextStyles.title,
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Enchufe: ${estacion.tipoEnchufe ?? "N/A"}', style: AppTextStyles.cardContent),
-              Text('Tarifa: ${estacion.tarifa ?? "N/A"}', style: AppTextStyles.cardContent),
-              Text('Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}', style: AppTextStyles.cardContent),
-              Text('Disponible: ${estacion.disponible ? "Sí" : "No"}', style: AppTextStyles.cardContent),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.darkCard.withOpacity(0.98),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+            title: Text(
+              estacion.nombre,
+              style: AppTextStyles.title.copyWith(
+                color: AppColors.purplePrimary,
+              ),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Enchufe: ${estacion.tipoEnchufe ?? "N/A"}',
+                    style: AppTextStyles.cardContent.copyWith(
+                      color: AppColors.purpleAccent,
+                    ),
+                  ),
+                  Text(
+                    'Tarifa: ${estacion.tarifa ?? "N/A"}',
+                    style: AppTextStyles.cardContent.copyWith(
+                      color: AppColors.hintColor,
+                    ),
+                  ),
+                  Text(
+                    'Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}',
+                    style: AppTextStyles.cardContent.copyWith(
+                      color: AppColors.purpleAccent,
+                    ),
+                  ),
+                  Text(
+                    'Disponible: ${estacion.disponible ? "Sí" : "No"}',
+                    style: AppTextStyles.cardContent.copyWith(
+                      color:
+                          estacion.disponible
+                              ? Colors.greenAccent
+                              : Colors.redAccent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.hintColor,
+                  textStyle: AppTextStyles.subtitle,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cerrar'),
+              ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.secondary,
-              textStyle: AppTextStyles.subtitle,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1045,6 +1189,26 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
               initialDate: _fechaProgramada ?? DateTime.now(),
               firstDate: DateTime.now(),
               lastDate: DateTime.now().add(const Duration(days: 365)),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: ColorScheme.dark(
+                      primary: AppColors.purplePrimary,
+                      onPrimary: AppColors.textColor,
+                      surface: AppColors.darkCard,
+                      onSurface: AppColors.textColor,
+                      secondary: AppColors.purpleAccent,
+                    ),
+                    dialogBackgroundColor: AppColors.darkBg,
+                    textButtonTheme: TextButtonThemeData(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.purplePrimary,
+                      ),
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
             );
             if (picked != null) {
               setState(() {
@@ -1053,10 +1217,18 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
             }
           },
           child: InputDecorator(
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.calendar_today, color: AppColors.purpleAccent),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(
+                Icons.calendar_today,
+                color: AppColors.purpleAccent,
+              ),
               labelText: 'Fecha programada',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              filled: true,
+              fillColor: AppColors.darkCard.withOpacity(0.92),
+              labelStyle: AppTextStyles.subtitle.copyWith(
+                color: AppColors.purpleAccent,
+              ),
             ),
             child: Text(
               _fechaProgramada != null
@@ -1081,7 +1253,10 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Comparativa de costos y emisiones', style: AppTextStyles.subtitle),
+            Text(
+              'Comparativa de costos y emisiones',
+              style: AppTextStyles.subtitle,
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -1089,9 +1264,21 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Vehículo Eléctrico', style: TextStyle(color: AppColors.purpleAccent, fontWeight: FontWeight.bold)),
-                      Text('Costo estimado: ₡${_costoVE?.toStringAsFixed(0) ?? "--"}', style: AppTextStyles.cardContent),
-                      Text('Emisiones: ${_emisionVE?.toStringAsFixed(1) ?? "--"} kg CO₂', style: AppTextStyles.cardContent),
+                      const Text(
+                        'Vehículo Eléctrico',
+                        style: TextStyle(
+                          color: AppColors.purpleAccent,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Costo estimado: ₡${_costoVE?.toStringAsFixed(0) ?? "--"}',
+                        style: AppTextStyles.cardContent,
+                      ),
+                      Text(
+                        'Emisiones: ${_emisionVE?.toStringAsFixed(1) ?? "--"} kg CO₂',
+                        style: AppTextStyles.cardContent,
+                      ),
                     ],
                   ),
                 ),
@@ -1100,9 +1287,21 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Gasolina', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                      Text('Costo estimado: ₡${_costoGasolina?.toStringAsFixed(0) ?? "--"}', style: AppTextStyles.cardContent),
-                      Text('Emisiones: ${_emisionGasolina?.toStringAsFixed(1) ?? "--"} kg CO₂', style: AppTextStyles.cardContent),
+                      const Text(
+                        'Gasolina',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Costo estimado: ₡${_costoGasolina?.toStringAsFixed(0) ?? "--"}',
+                        style: AppTextStyles.cardContent,
+                      ),
+                      Text(
+                        'Emisiones: ${_emisionGasolina?.toStringAsFixed(1) ?? "--"} kg CO₂',
+                        style: AppTextStyles.cardContent,
+                      ),
                     ],
                   ),
                 ),
@@ -1116,14 +1315,19 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                   const SizedBox(width: 6),
                   Text(
                     'Reducción de emisiones: ${_reduccionCO2!.toStringAsFixed(1)} kg CO₂',
-                    style: AppTextStyles.cardContent.copyWith(color: Colors.green),
+                    style: AppTextStyles.cardContent.copyWith(
+                      color: Colors.green,
+                    ),
                   ),
                 ],
               ),
             const SizedBox(height: 4),
             Text(
               'Distancia total: ${distanciaKm.toStringAsFixed(1)} km',
-              style: AppTextStyles.cardContent.copyWith(fontSize: 13, color: AppColors.textColor.withOpacity(0.7)),
+              style: AppTextStyles.cardContent.copyWith(
+                fontSize: 13,
+                color: AppColors.textColor.withOpacity(0.7),
+              ),
             ),
           ],
         ),
@@ -1134,7 +1338,10 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
   Widget _buildCalculadoraParametros() {
     // Widget para editar los parámetros de la calculadora
     return ExpansionTile(
-      title: Text('Parámetros de la calculadora', style: AppTextStyles.subtitle),
+      title: Text(
+        'Parámetros de la calculadora',
+        style: AppTextStyles.subtitle,
+      ),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
@@ -1142,15 +1349,23 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('Consumo VE (kWh/100km)', style: AppTextStyles.cardContent)),
+                  Expanded(
+                    child: Text(
+                      'Consumo VE (kWh/100km)',
+                      style: AppTextStyles.cardContent,
+                    ),
+                  ),
                   SizedBox(
                     width: 80,
                     child: TextFormField(
                       initialValue: _consumoVE_kWh_100km.toString(),
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onChanged: (v) {
                         final val = double.tryParse(v);
-                        if (val != null && val > 0) setState(() => _consumoVE_kWh_100km = val);
+                        if (val != null && val > 0)
+                          setState(() => _consumoVE_kWh_100km = val);
                       },
                     ),
                   ),
@@ -1158,15 +1373,23 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
               ),
               Row(
                 children: [
-                  Expanded(child: Text('Precio kWh (₡)', style: AppTextStyles.cardContent)),
+                  Expanded(
+                    child: Text(
+                      'Precio kWh (₡)',
+                      style: AppTextStyles.cardContent,
+                    ),
+                  ),
                   SizedBox(
                     width: 80,
                     child: TextFormField(
                       initialValue: _precioKWh.toString(),
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onChanged: (v) {
                         final val = double.tryParse(v);
-                        if (val != null && val > 0) setState(() => _precioKWh = val);
+                        if (val != null && val > 0)
+                          setState(() => _precioKWh = val);
                       },
                     ),
                   ),
@@ -1174,15 +1397,23 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
               ),
               Row(
                 children: [
-                  Expanded(child: Text('Consumo gasolina (L/100km)', style: AppTextStyles.cardContent)),
+                  Expanded(
+                    child: Text(
+                      'Consumo gasolina (L/100km)',
+                      style: AppTextStyles.cardContent,
+                    ),
+                  ),
                   SizedBox(
                     width: 80,
                     child: TextFormField(
                       initialValue: _consumoGasolina_L_100km.toString(),
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onChanged: (v) {
                         final val = double.tryParse(v);
-                        if (val != null && val > 0) setState(() => _consumoGasolina_L_100km = val);
+                        if (val != null && val > 0)
+                          setState(() => _consumoGasolina_L_100km = val);
                       },
                     ),
                   ),
@@ -1190,15 +1421,23 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
               ),
               Row(
                 children: [
-                  Expanded(child: Text('Precio gasolina (₡/L)', style: AppTextStyles.cardContent)),
+                  Expanded(
+                    child: Text(
+                      'Precio gasolina (₡/L)',
+                      style: AppTextStyles.cardContent,
+                    ),
+                  ),
                   SizedBox(
                     width: 80,
                     child: TextFormField(
                       initialValue: _precioGasolina_L.toString(),
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onChanged: (v) {
                         final val = double.tryParse(v);
-                        if (val != null && val > 0) setState(() => _precioGasolina_L = val);
+                        if (val != null && val > 0)
+                          setState(() => _precioGasolina_L = val);
                       },
                     ),
                   ),
@@ -1206,15 +1445,23 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
               ),
               Row(
                 children: [
-                  Expanded(child: Text('Emisión gasolina (kg CO₂/L)', style: AppTextStyles.cardContent)),
+                  Expanded(
+                    child: Text(
+                      'Emisión gasolina (kg CO₂/L)',
+                      style: AppTextStyles.cardContent,
+                    ),
+                  ),
                   SizedBox(
                     width: 80,
                     child: TextFormField(
                       initialValue: _emisionCO2_L.toString(),
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onChanged: (v) {
                         final val = double.tryParse(v);
-                        if (val != null && val > 0) setState(() => _emisionCO2_L = val);
+                        if (val != null && val > 0)
+                          setState(() => _emisionCO2_L = val);
                       },
                     ),
                   ),
@@ -1222,15 +1469,23 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
               ),
               Row(
                 children: [
-                  Expanded(child: Text('Emisión VE (kg CO₂/kWh)', style: AppTextStyles.cardContent)),
+                  Expanded(
+                    child: Text(
+                      'Emisión VE (kg CO₂/kWh)',
+                      style: AppTextStyles.cardContent,
+                    ),
+                  ),
                   SizedBox(
                     width: 80,
                     child: TextFormField(
                       initialValue: _emisionCO2_kWh.toString(),
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onChanged: (v) {
                         final val = double.tryParse(v);
-                        if (val != null && val >= 0) setState(() => _emisionCO2_kWh = val);
+                        if (val != null && val >= 0)
+                          setState(() => _emisionCO2_kWh = val);
                       },
                     ),
                   ),
@@ -1252,8 +1507,10 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
     final puntos = _polylines.isNotEmpty ? _polylines.first.points : [];
     for (int i = 0; i < puntos.length - 1; i++) {
       distanciaKm += _distanceKm(
-        puntos[i].latitude, puntos[i].longitude,
-        puntos[i + 1].latitude, puntos[i + 1].longitude,
+        puntos[i].latitude,
+        puntos[i].longitude,
+        puntos[i + 1].latitude,
+        puntos[i + 1].longitude,
       );
     }
     // Ejecutar cálculo de costos/emisiones
@@ -1274,91 +1531,103 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
           child: StyledMap(
             loading: _loadingMapa,
             error: _errorMapa,
-            position: _currentPosition == null
-                ? null
-                : PositionData(
-                    latitude: _currentPosition!.latitude,
-                    longitude: _currentPosition!.longitude,
-                  ),
+            position:
+                _currentPosition == null
+                    ? null
+                    : PositionData(
+                      latitude: _currentPosition!.latitude,
+                      longitude: _currentPosition!.longitude,
+                    ),
             onMapCreated: _onMapCreated,
             estaciones: _estacionesSugeridas,
             polylines: _polylines,
-            customMarkers: _buildMarkers(_currentPosition == null
-                ? null
-                : PositionData(
+            customMarkers: _buildMarkers(
+              _currentPosition == null
+                  ? null
+                  : PositionData(
                     latitude: _currentPosition!.latitude,
                     longitude: _currentPosition!.longitude,
-                  )),
+                  ),
+            ),
           ),
         ),
         const SizedBox(height: 8),
         Text('Estaciones sugeridas:', style: AppTextStyles.subtitle),
         ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxHeight: 220,
-            minHeight: 0,
-          ),
+          constraints: const BoxConstraints(maxHeight: 220, minHeight: 0),
           child: ListView.builder(
             shrinkWrap: true,
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: _estacionesSugeridas.length,
             itemBuilder: (context, idx) {
               final estacion = _estacionesSugeridas[idx];
-              final esPrioritaria = _idsEstacionesPrioritarias.contains(estacion.id);
+              final esPrioritaria = _idsEstacionesPrioritarias.contains(
+                estacion.id,
+              );
               final distancia = _distanciasEstaciones[estacion.id] ?? 0.0;
               return Card(
-          color: esPrioritaria ? AppColors.purpleAccent.withOpacity(0.25) : AppColors.darkCard,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: esPrioritaria
-                ? BorderSide(color: AppColors.purpleAccent, width: 2)
-                : BorderSide.none,
-          ),
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          child: ListTile(
-            leading: Icon(
-              Icons.ev_station,
-              color: esPrioritaria ? AppColors.purpleAccent : AppColors.purplePrimary,
-            ),
-            title: Row(
-              children: [
-                Expanded(
-            child: Text(
-              estacion.nombre,
-              style: AppTextStyles.cardContent,
-              overflow: TextOverflow.ellipsis,
-            ),
+                color:
+                    esPrioritaria
+                        ? AppColors.purpleAccent.withOpacity(0.25)
+                        : AppColors.darkCard,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side:
+                      esPrioritaria
+                          ? BorderSide(color: AppColors.purpleAccent, width: 2)
+                          : BorderSide.none,
                 ),
-                if (esPrioritaria)
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.purpleAccent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'Prioritaria',
-                  style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.ev_station,
+                    color:
+                        esPrioritaria
+                            ? AppColors.purpleAccent
+                            : AppColors.purplePrimary,
                   ),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          estacion.nombre,
+                          style: AppTextStyles.cardContent,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (esPrioritaria)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.purpleAccent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Prioritaria',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    'Distancia en ruta: ${distancia.toStringAsFixed(1)} km\n'
+                    'Enchufe: ${estacion.tipoEnchufe ?? "N/A"}\n'
+                    'Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}\n'
+                    'Disponible: ${estacion.disponible ? "Sí" : "No"}',
+                    style: AppTextStyles.cardContent.copyWith(fontSize: 13),
+                  ),
+                  onTap: () => _showEstacionDialog(context, estacion),
                 ),
-              ),
-            ),
-              ],
-            ),
-            subtitle: Text(
-              'Distancia en ruta: ${distancia.toStringAsFixed(1)} km\n'
-              'Enchufe: ${estacion.tipoEnchufe ?? "N/A"}\n'
-              'Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}\n'
-              'Disponible: ${estacion.disponible ? "Sí" : "No"}',
-              style: AppTextStyles.cardContent.copyWith(fontSize: 13),
-            ),
-            onTap: () => _showEstacionDialog(context, estacion),
-          ),
               );
             },
           ),
@@ -1374,15 +1643,19 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.purplePrimary,
+                foregroundColor: AppColors.textColor,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
+                  horizontal: 28,
+                  vertical: 16,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(22),
                 ),
+                elevation: 8,
+                shadowColor: AppColors.purpleAccent.withOpacity(0.22),
+                textStyle: AppTextStyles.title.copyWith(fontSize: 18),
               ),
-              icon: const Icon(Icons.save),
+              icon: const Icon(Icons.save, size: 26),
               label: const Text('Guardar ruta'),
               onPressed: _guardarRuta,
             ),
@@ -1394,98 +1667,108 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBg,
-      appBar: AppBar(
-        backgroundColor: AppColors.darkCard,
-        elevation: 0,
-        title: Text('Planificar Ruta', style: AppTextStyles.title),
-        centerTitle: true,
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: AppDecorations.backgroundGradient,
-        child: SafeArea(
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: AppDecorations.card(opacity: 0.96),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 20,
-                    ),
-                    child: _buildOrigenDestino(),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: AppDecorations.card(opacity: 0.96),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 20,
-                    ),
-                    child: _buildAutonomia(),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: AppDecorations.card(opacity: 0.96),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 20,
-                    ),
-                    child: _buildPreferenciasCarga(),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: AppDecorations.card(opacity: 0.96),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 20,
-                    ),
-                    child: _buildFechaSelector(),
-                  ),
-                  if (_mostrarResultado)
+    return Container(
+      decoration: AppDecorations.backgroundGradient,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: AppColors.darkCard.withOpacity(0.98),
+          elevation: 0,
+          title: Text('Planificar Ruta', style: AppTextStyles.title),
+          centerTitle: true,
+          shadowColor: AppColors.purplePrimary.withOpacity(0.12),
+          iconTheme: const IconThemeData(color: AppColors.purpleAccent),
+        ),
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          child: SafeArea(
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Container(
                       margin: const EdgeInsets.only(bottom: 20),
-                      decoration: AppDecorations.card(opacity: 0.98),
+                      decoration: AppDecorations.card(opacity: 0.96),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: 20,
                         vertical: 20,
                       ),
-                      child: _buildResultado(),
+                      child: _buildOrigenDestino(),
                     ),
-                  const SizedBox(height: 80), // Espacio para el botón flotante
-                ],
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: AppDecorations.card(opacity: 0.96),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      child: _buildAutonomia(),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: AppDecorations.card(opacity: 0.96),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      child: _buildPreferenciasCarga(),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: AppDecorations.card(opacity: 0.96),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      child: _buildFechaSelector(),
+                    ),
+                    if (_mostrarResultado)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: AppDecorations.card(opacity: 0.98),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 20,
+                        ),
+                        child: _buildResultado(),
+                      ),
+                    const SizedBox(
+                      height: 80,
+                    ), // Espacio para el botón flotante
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: SizedBox(
-        width: double.infinity,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.purplePrimary,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: SizedBox(
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.purplePrimary,
+                foregroundColor: AppColors.textColor,
+                padding: const EdgeInsets.symmetric(vertical: 22),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                textStyle: AppTextStyles.title.copyWith(fontSize: 20),
+                elevation: 10,
+                shadowColor: AppColors.purpleAccent.withOpacity(0.25),
               ),
-              textStyle: AppTextStyles.title.copyWith(fontSize: 20),
-              elevation: 8,
-              shadowColor: AppColors.purpleAccent.withOpacity(0.3),
+              icon: const Icon(Icons.alt_route, size: 32),
+              label: const Text('Planificar Ruta'),
+              onPressed: _planificarRuta,
             ),
-            icon: const Icon(Icons.alt_route, size: 30),
-            label: const Text('Planificar Ruta'),
-            onPressed: _planificarRuta,
           ),
         ),
       ),

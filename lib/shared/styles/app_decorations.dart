@@ -4,9 +4,14 @@ import 'app_colors.dart';
 class AppDecorations {
   static const BoxDecoration backgroundGradient = BoxDecoration(
     gradient: LinearGradient(
-      colors: [AppColors.purplePrimary, AppColors.purpleAccent, AppColors.darkBg],
+      colors: [
+        Color(0xFF181822),
+        Color(0xFF221C3A),
+        Color(0xFF181822),
+      ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
+      stops: [0.0, 0.4, 0.8],
     ),
   );
 
@@ -15,11 +20,15 @@ class AppDecorations {
     borderRadius: BorderRadius.circular(32),
     boxShadow: [
       BoxShadow(
-        color: AppColors.purplePrimary.withOpacity(0.18),
-        blurRadius: 16,
-        offset: Offset(0, 8),
+        color: AppColors.purplePrimary.withOpacity(0.22),
+        blurRadius: 24,
+        offset: Offset(0, 12),
       ),
     ],
+    border: Border.all(
+      color: AppColors.purplePrimary.withOpacity(0.12),
+      width: 1.2,
+    ),
   );
 
   static BoxDecoration iconCircle = BoxDecoration(
@@ -29,5 +38,12 @@ class AppDecorations {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.purplePrimary.withOpacity(0.25),
+        blurRadius: 12,
+        offset: Offset(0, 4),
+      ),
+    ],
   );
 }

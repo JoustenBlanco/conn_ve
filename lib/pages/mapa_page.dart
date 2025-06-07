@@ -53,7 +53,7 @@ class _MapaPageState extends State<MapaPage> {
       "featureType": "water",
       "elementType": "geometry",
       "stylers": [
-        { "color": "#4B176A" }
+        { "color": "#2D1856" }
       ]
     },
     {
@@ -67,22 +67,22 @@ class _MapaPageState extends State<MapaPage> {
       "featureType": "road",
       "elementType": "geometry",
       "stylers": [
-        { "color": "#7B1FA2" },
-        { "lightness": -20 }
+        { "color": "#8F5AFF" },
+        { "lightness": -10 }
       ]
     },
     {
       "featureType": "poi",
       "elementType": "geometry",
       "stylers": [
-        { "color": "#2A1946" }
+        { "color": "#221C3A" }
       ]
     },
     {
       "featureType": "transit",
       "elementType": "geometry",
       "stylers": [
-        { "color": "#B388FF" }
+        { "color": "#D1B3FF" }
       ]
     },
     {
@@ -97,7 +97,7 @@ class _MapaPageState extends State<MapaPage> {
     {
       "elementType": "labels.text.fill",
       "stylers": [
-        { "color": "#ffffff" }
+        { "color": "#F8F8FF" }
       ]
     },
     {
@@ -105,7 +105,7 @@ class _MapaPageState extends State<MapaPage> {
       "elementType": "geometry",
       "stylers": [
         { "weight": 0.6 },
-        { "color": "#7B1FA2" }
+        { "color": "#8F5AFF" }
       ]
     },
     {
@@ -119,6 +119,20 @@ class _MapaPageState extends State<MapaPage> {
       "elementType": "geometry",
       "stylers": [
         { "color": "#23232B" }
+      ]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#B388FF" }
+      ]
+    },
+    {
+      "featureType": "road.arterial",
+      "elementType": "geometry",
+      "stylers": [
+        { "color": "#7B1FA2" }
       ]
     }
   ]
@@ -203,29 +217,41 @@ class _MapaPageState extends State<MapaPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Theme.of(context).cardColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('Filtros avanzados', style: AppTextStyles.title),
+          backgroundColor: AppColors.darkCard.withOpacity(0.98),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Text('Filtros avanzados', style: AppTextStyles.title.copyWith(color: AppColors.purplePrimary)),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Tipo de enchufe
-                Text('Tipo de enchufe', style: AppTextStyles.cardContent),
-                DropdownButton<String>(
-                  value: tipoTemp,
-                  isExpanded: true,
-                  items: tipos.map((tipo) {
-                    return DropdownMenuItem(
-                      value: tipo,
-                      child: Text(tipo, style: AppTextStyles.cardContent),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    tipoTemp = value;
-                    // Forzar rebuild del dialog
-                    (context as Element).markNeedsBuild();
-                  },
+                Text('Tipo de enchufe', style: AppTextStyles.cardContent.copyWith(color: AppColors.purpleAccent)),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.darkBg.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: DropdownButton<String>(
+                    value: tipoTemp,
+                    isExpanded: true,
+                    dropdownColor: AppColors.darkCard,
+                    iconEnabledColor: AppColors.purplePrimary,
+                    style: AppTextStyles.cardContent.copyWith(color: AppColors.textColor),
+                    underline: const SizedBox(),
+                    borderRadius: BorderRadius.circular(16),
+                    items: tipos.map((tipo) {
+                      return DropdownMenuItem(
+                        value: tipo,
+                        child: Text(tipo, style: AppTextStyles.cardContent.copyWith(color: AppColors.textColor)),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      tipoTemp = value;
+                      (context as Element).markNeedsBuild();
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
                 // Disponibilidad
@@ -237,8 +263,11 @@ class _MapaPageState extends State<MapaPage> {
                         soloDispTemp = val ?? false;
                         (context as Element).markNeedsBuild();
                       },
+                      activeColor: AppColors.purplePrimary,
+                      checkColor: AppColors.textColor,
+                      side: const BorderSide(color: AppColors.purpleAccent, width: 1.2),
                     ),
-                    Text('Solo disponibles', style: AppTextStyles.cardContent),
+                    Text('Solo disponibles', style: AppTextStyles.cardContent.copyWith(color: AppColors.purpleAccent)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -247,7 +276,7 @@ class _MapaPageState extends State<MapaPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Potencia (kW)', style: AppTextStyles.cardContent),
+                      Text('Potencia (kW)', style: AppTextStyles.cardContent.copyWith(color: AppColors.purpleAccent)),
                       RangeSlider(
                         values: potenciaTemp,
                         min: minPot,
@@ -261,6 +290,8 @@ class _MapaPageState extends State<MapaPage> {
                           potenciaTemp = values;
                           (context as Element).markNeedsBuild();
                         },
+                        activeColor: AppColors.purplePrimary,
+                        inactiveColor: AppColors.purpleAccent.withOpacity(0.3),
                       ),
                     ],
                   ),
@@ -270,9 +301,20 @@ class _MapaPageState extends State<MapaPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.hintColor,
+                textStyle: AppTextStyles.subtitle,
+              ),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.purplePrimary,
+                foregroundColor: AppColors.textColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                textStyle: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
+                elevation: 0,
+              ),
               onPressed: () {
                 setState(() {
                   _selectedTipoEnchufe = tipoTemp == "Todos" ? null : tipoTemp;
@@ -330,47 +372,58 @@ class _MapaPageState extends State<MapaPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBg,
-      appBar: AppBar(
-        backgroundColor: AppColors.darkCard,
-        elevation: 0,
-        title: Text('Mapa', style: AppTextStyles.title),
-        centerTitle: true,
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: AppDecorations.backgroundGradient,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.cardPaddingHorizontal,
-              vertical: AppConstants.cardPaddingVertical,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 12),
-                MapSearchBar(
-                  controller: _searchController,
-                  onChanged: (value) => _onSearchChanged(),
-                  onFilterPressed: _abrirModalFiltros,
-                ),
-                const SizedBox(height: 24),
-                StyledMap(
-                  loading: _loading,
-                  error: _error,
-                  position: _currentPosition == null
-                      ? null
-                      : PositionData(
-                          latitude: _currentPosition!.latitude,
-                          longitude: _currentPosition!.longitude,
-                        ),
-                  onMapCreated: _onMapCreated,
-                  estaciones: _filteredEstaciones,
-                ),
-              ],
+    return Container(
+      decoration: AppDecorations.backgroundGradient,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: AppColors.darkCard.withOpacity(0.98),
+          elevation: 0,
+          title: Text('Mapa', style: AppTextStyles.title),
+          centerTitle: true,
+          shadowColor: AppColors.purplePrimary.withOpacity(0.12),
+          iconTheme: const IconThemeData(color: AppColors.purpleAccent),
+          automaticallyImplyLeading: false, // <-- elimina el botón de ir atrás
+        ),
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          // El gradiente ya está aplicado en el contenedor principal
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.cardPaddingHorizontal,
+                vertical: AppConstants.cardPaddingVertical,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 12),
+                  MapSearchBar(
+                    controller: _searchController,
+                    onChanged: (value) => _onSearchChanged(),
+                    onFilterPressed: _abrirModalFiltros,
+                    // Puedes agregar color de fondo si quieres más efecto Spotify:
+                    // backgroundColor: AppColors.darkCard.withOpacity(0.95),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    decoration: AppDecorations.card(opacity: 0.98),
+                    child: StyledMap(
+                      loading: _loading,
+                      error: _error,
+                      position: _currentPosition == null
+                          ? null
+                          : PositionData(
+                              latitude: _currentPosition!.latitude,
+                              longitude: _currentPosition!.longitude,
+                            ),
+                      onMapCreated: _onMapCreated,
+                      estaciones: _filteredEstaciones,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

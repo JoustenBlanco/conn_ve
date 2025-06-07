@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../shared/styles/app_colors.dart';
+import '../shared/styles/app_decorations.dart';
 import 'mapa_page.dart';
 import 'viajes_lista_page.dart';
 import 'comunidad_page.dart';
@@ -30,34 +31,65 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBg,
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        backgroundColor: AppColors.darkCard,
-        selectedItemColor: AppColors.purplePrimary,
-        unselectedItemColor: AppColors.textColor.withOpacity(0.6),
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_rounded),
-            label: 'Mapa',
+    return Container(
+      decoration: AppDecorations.backgroundGradient,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _pages[_selectedIndex],
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: AppColors.darkCard.withOpacity(0.98),
+            border: const Border(
+              top: BorderSide(
+                color: Color(0xFF3C2A5D),
+                width: 1.2,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.purplePrimary.withOpacity(0.13),
+                blurRadius: 18,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.alt_route_rounded),
-            label: 'Viajes',
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            selectedItemColor: AppColors.purplePrimary,
+            unselectedItemColor: AppColors.hintColor,
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              letterSpacing: 0.5,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            ),
+            type: BottomNavigationBarType.fixed,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.map_rounded, size: 28),
+                label: 'Mapa',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.alt_route_rounded, size: 28),
+                label: 'Viajes',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.people_alt_rounded, size: 28),
+                label: 'Comunidad',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_rounded, size: 28),
+                label: 'Perfil',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_rounded),
-            label: 'Comunidad',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_rounded),
-            label: 'Perfil',
-          ),
-        ],
+        ),
       ),
     );
   }

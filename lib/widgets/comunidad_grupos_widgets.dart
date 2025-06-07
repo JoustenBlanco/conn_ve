@@ -48,10 +48,14 @@ class _GruposListState extends State<GruposList> {
               child: TextField(
                 decoration: InputDecoration(
                   hintText: 'Buscar grupo por nombre',
+                  hintStyle: AppTextStyles.subtitle.copyWith(color: AppColors.hintColor),
                   prefixIcon: const Icon(Icons.search, color: AppColors.purpleAccent),
+                  filled: true,
+                  fillColor: AppColors.darkCard.withOpacity(0.92),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                 ),
+                style: AppTextStyles.cardContent.copyWith(color: AppColors.textColor),
                 onChanged: (val) => setState(() => _busqueda = val),
               ),
             ),
@@ -94,7 +98,7 @@ class _GruposListState extends State<GruposList> {
                                         child: Icon(Icons.group, color: AppColors.textColor),
                                       ),
                                       title: Text(grupo.nombre, style: AppTextStyles.cardContent.copyWith(fontSize: 18)),
-                                      subtitle: Text(grupo.descripcion, style: AppTextStyles.subtitle.copyWith(fontSize: 14)),
+                                      subtitle: Text(grupo.descripcion, style: AppTextStyles.subtitle.copyWith(fontSize: 14, color: AppColors.textColor)),
                                       trailing: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -124,17 +128,33 @@ class _GruposListState extends State<GruposList> {
                                             ),
                                           if (membresia?.rol == 'admin')
                                             IconButton(
-                                              icon: const Icon(Icons.delete, color: Colors.red),
+                                              icon: const Icon(Icons.delete, color: AppColors.purplePrimary),
                                               tooltip: 'Eliminar grupo',
                                               onPressed: () async {
                                                 final confirm = await showDialog<bool>(
                                                   context: context,
                                                   builder: (ctx) => AlertDialog(
-                                                    title: const Text('Eliminar grupo'),
-                                                    content: const Text('¿Seguro que deseas eliminar este grupo? Esta acción no se puede deshacer.'),
+                                                    backgroundColor: AppColors.darkCard.withOpacity(0.98),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                                                    title: Text('Eliminar grupo', style: AppTextStyles.title.copyWith(color: AppColors.purplePrimary)),
+                                                    content: Text('¿Seguro que deseas eliminar este grupo? Esta acción no se puede deshacer.', style: AppTextStyles.cardContent.copyWith(color: AppColors.hintColor)),
                                                     actions: [
-                                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
+                                                      TextButton(
+                                                        style: TextButton.styleFrom(
+                                                          foregroundColor: AppColors.hintColor,
+                                                          textStyle: AppTextStyles.subtitle,
+                                                        ),
+                                                        onPressed: () => Navigator.pop(ctx, false),
+                                                        child: const Text('Cancelar'),
+                                                      ),
+                                                      TextButton(
+                                                        style: TextButton.styleFrom(
+                                                          foregroundColor: Colors.redAccent,
+                                                          textStyle: AppTextStyles.subtitle.copyWith(color: Colors.redAccent),
+                                                        ),
+                                                        onPressed: () => Navigator.pop(ctx, true),
+                                                        child: const Text('Eliminar'),
+                                                      ),
                                                     ],
                                                   ),
                                                 );
@@ -153,7 +173,7 @@ class _GruposListState extends State<GruposList> {
                                         grupo.ubicacion != null && grupo.ubicacion!.isNotEmpty
                                             ? 'Ubicación: ${grupo.ubicacion}'
                                             : '',
-                                        style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
+                                        style: AppTextStyles.subtitle.copyWith(color: AppColors.hintColor),
                                       ),
                                     ),
                                     Padding(
@@ -206,6 +226,8 @@ class _GruposListState extends State<GruposList> {
             foregroundColor: AppColors.textColor,
             icon: const Icon(Icons.add),
             label: const Text('Crear grupo'),
+            elevation: 8,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             onPressed: _showCrearGrupoDialog,
           ),
         ),
@@ -341,85 +363,104 @@ class _GrupoChatScreenState extends State<GrupoChatScreen> {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.darkCard,
+        backgroundColor: AppColors.darkCard.withOpacity(0.98),
+        elevation: 0,
         title: Text('Chat: ${widget.grupo.nombre}', style: AppTextStyles.title),
+        centerTitle: true,
+        shadowColor: AppColors.purplePrimary.withOpacity(0.12),
+        iconTheme: const IconThemeData(color: AppColors.purpleAccent),
       ),
-      backgroundColor: AppColors.darkBg,
-      body: Column(
-        children: [
-          Expanded(
-            child: FutureBuilder<List<GrupoMensaje>>(
-              future: _mensajesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                final mensajes = snapshot.data ?? [];
-                if (mensajes.isEmpty) {
-                  return const Center(child: Text('No hay mensajes aún.'));
-                }
-                // Mostrar mensajes de más nuevos abajo (orden descendente)
-                final mensajesOrdenados = List<GrupoMensaje>.from(mensajes)..sort((a, b) => a.fecha.compareTo(b.fecha));
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  itemCount: mensajesOrdenados.length,
-                  itemBuilder: (context, idx) {
-                    final m = mensajesOrdenados[idx];
-                    final isMe = m.idUsuario == userId;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: ChatBubble(
-                          text: m.contenido,
-                          isMe: isMe,
-                          nombre: m.nombreUsuario ?? '',
-                          fecha: m.fecha,
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: AppDecorations.backgroundGradient,
+        child: Column(
+          children: [
+            Expanded(
+              child: FutureBuilder<List<GrupoMensaje>>(
+                future: _mensajesFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  final mensajes = snapshot.data ?? [];
+                  if (mensajes.isEmpty) {
+                    return const Center(child: Text('No hay mensajes aún.'));
+                  }
+                  // Mostrar mensajes de más nuevos abajo (orden descendente)
+                  final mensajesOrdenados = List<GrupoMensaje>.from(mensajes)..sort((a, b) => a.fecha.compareTo(b.fecha));
+                  return ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    itemCount: mensajesOrdenados.length,
+                    itemBuilder: (context, idx) {
+                      final m = mensajesOrdenados[idx];
+                      final isMe = m.idUsuario == userId;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Align(
+                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          child: ChatBubble(
+                            text: m.contenido,
+                            isMe: isMe,
+                            nombre: m.nombreUsuario ?? '',
+                            fecha: m.fecha,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    style: const TextStyle(color: AppColors.textColor),
-                    decoration: InputDecoration(
-                      hintText: 'Escribe un mensaje...',
-                      filled: true,
-                      fillColor: AppColors.darkCard,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        borderSide: BorderSide.none,
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.darkCard.withOpacity(0.92),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        style: AppTextStyles.cardContent.copyWith(color: AppColors.textColor),
+                        decoration: InputDecoration(
+                          hintText: 'Escribe un mensaje...',
+                          hintStyle: AppTextStyles.subtitle.copyWith(color: AppColors.hintColor),
+                          filled: true,
+                          fillColor: Colors.transparent,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        ),
+                        enabled: !_loading && widget.membresia != null,
+                        onSubmitted: (_) => _enviarMensaje(),
                       ),
-                      hintStyle: AppTextStyles.subtitle,
                     ),
-                    enabled: !_loading && widget.membresia != null,
-                    onSubmitted: (_) => _enviarMensaje(),
-                  ),
+                    const SizedBox(width: 8),
+                    FloatingActionButton(
+                      mini: true,
+                      backgroundColor: AppColors.purpleAccent,
+                      foregroundColor: AppColors.textColor,
+                      elevation: 6,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      onPressed: _loading || widget.membresia == null ? null : _enviarMensaje,
+                      child: const Icon(Icons.send, color: Colors.white),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                FloatingActionButton(
-                  mini: true,
-                  backgroundColor: AppColors.purpleAccent,
-                  onPressed: _loading || widget.membresia == null ? null : _enviarMensaje,
-                  child: const Icon(Icons.send, color: AppColors.textColor),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -486,7 +527,7 @@ class ChatBubble extends StatelessWidget {
             child: Text(
               '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}',
               style: AppTextStyles.subtitle.copyWith(
-                color: AppColors.hintColor,
+                color: isMe ? AppColors.darkCard : AppColors.hintColor,
                 fontSize: 11,
               ),
             ),

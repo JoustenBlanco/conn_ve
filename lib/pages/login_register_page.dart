@@ -6,6 +6,7 @@ import 'package:conn_ve/shared/styles/app_colors.dart';
 import 'package:conn_ve/shared/styles/app_text_styles.dart';
 import 'package:conn_ve/shared/styles/app_decorations.dart';
 import 'package:conn_ve/shared/styles/app_constants.dart';
+import 'package:conn_ve/pages/home_page.dart';
 
 class LoginRegisterPage extends StatefulWidget {
   const LoginRegisterPage({super.key});
@@ -111,7 +112,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => OtpVerificationPage(),
+          builder: (_) => HomePage(),
         ),
       );
     } on AuthException catch (e) {

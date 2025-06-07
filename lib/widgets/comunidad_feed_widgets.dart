@@ -49,6 +49,7 @@ class _FeedForoState extends State<FeedForo> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: FutureBuilder<List<ForoPostWithUserAndComments>>(
         future: _postsFuture,
         builder: (context, snapshot) {
@@ -96,16 +97,35 @@ class _FeedForoState extends State<FeedForo> {
                           ),
                           trailing: post.usuario.id == _currentUserId
                               ? PopupMenuButton<String>(
+                                  color: AppColors.darkCard.withOpacity(0.98),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                  icon: const Icon(Icons.more_vert, color: AppColors.purpleAccent),
                                   onSelected: (value) async {
                                     if (value == 'borrar') {
                                       final confirm = await showDialog<bool>(
                                         context: context,
                                         builder: (ctx) => AlertDialog(
-                                          title: const Text('Confirmar'),
-                                          content: const Text('¿Borrar esta publicación?'),
+                                          backgroundColor: AppColors.darkCard.withOpacity(0.98),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                                          title: Text('Confirmar', style: AppTextStyles.title.copyWith(color: AppColors.purplePrimary)),
+                                          content: Text('¿Borrar esta publicación?', style: AppTextStyles.cardContent.copyWith(color: AppColors.hintColor)),
                                           actions: [
-                                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Borrar')),
+                                            TextButton(
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: AppColors.hintColor,
+                                                textStyle: AppTextStyles.subtitle,
+                                              ),
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                              child: const Text('Cancelar'),
+                                            ),
+                                            TextButton(
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: Colors.redAccent,
+                                                textStyle: AppTextStyles.subtitle.copyWith(color: Colors.redAccent),
+                                              ),
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              child: const Text('Borrar'),
+                                            ),
                                           ],
                                         ),
                                       );
@@ -116,9 +136,15 @@ class _FeedForoState extends State<FeedForo> {
                                     }
                                   },
                                   itemBuilder: (ctx) => [
-                                    const PopupMenuItem(
+                                    PopupMenuItem(
                                       value: 'borrar',
-                                      child: Text('Borrar'),
+                                      child: Text(
+                                        'Borrar',
+                                        style: AppTextStyles.subtitle.copyWith(
+                                          color: Colors.redAccent,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 )
@@ -131,7 +157,7 @@ class _FeedForoState extends State<FeedForo> {
                           ),
                         if (post.contenido.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                            padding: const EdgeInsets.only(left: 18, right: 18, top: 6, bottom: 16),
                             child: Text(post.contenido, style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor)),
                           ),
                         Padding(
@@ -156,8 +182,14 @@ class _FeedForoState extends State<FeedForo> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.purplePrimary,
+        foregroundColor: AppColors.textColor,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: const Icon(Icons.add, size: 30),
         onPressed: _showCrearPostDialog,
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -203,19 +235,34 @@ class _CrearPostDialogState extends State<CrearPostDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Nueva publicación'),
+      backgroundColor: AppColors.darkCard.withOpacity(0.98),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      title: Text('Nueva publicación', style: AppTextStyles.title.copyWith(color: AppColors.purplePrimary)),
       content: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextFormField(
-              decoration: const InputDecoration(labelText: 'Título'),
+              decoration: InputDecoration(
+                labelText: 'Título',
+                labelStyle: AppTextStyles.subtitle.copyWith(color: AppColors.purpleAccent),
+                filled: true,
+                fillColor: AppColors.darkBg.withOpacity(0.85),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               onSaved: (v) => _titulo = v?.trim() ?? '',
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingrese un título' : null,
             ),
+            const SizedBox(height: 12),
             TextFormField(
-              decoration: const InputDecoration(labelText: 'Contenido'),
+              decoration: InputDecoration(
+                labelText: 'Contenido',
+                labelStyle: AppTextStyles.subtitle.copyWith(color: AppColors.purpleAccent),
+                filled: true,
+                fillColor: AppColors.darkBg.withOpacity(0.85),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               minLines: 2,
               maxLines: 5,
               onSaved: (v) => _contenido = v?.trim() ?? '',
@@ -225,10 +272,26 @@ class _CrearPostDialogState extends State<CrearPostDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.hintColor,
+            textStyle: AppTextStyles.subtitle,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
         ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.purplePrimary,
+            foregroundColor: AppColors.textColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            textStyle: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
+            elevation: 0,
+          ),
           onPressed: _loading ? null : _crearPost,
-          child: _loading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Publicar'),
+          child: _loading
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Publicar'),
         ),
       ],
     );
@@ -302,14 +365,16 @@ class _ComentariosDialogState extends State<ComentariosDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Comentarios'),
+      backgroundColor: AppColors.darkCard.withOpacity(0.98),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      title: Text('Comentarios', style: AppTextStyles.title.copyWith(color: AppColors.purplePrimary)),
       content: SizedBox(
         width: 350,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (widget.post.comentarios.isEmpty)
-              const Text('No hay comentarios aún.'),
+              Text('No hay comentarios aún.', style: AppTextStyles.subtitle.copyWith(color: AppColors.hintColor)),
             if (widget.post.comentarios.isNotEmpty)
               SizedBox(
                 height: 200,
@@ -317,25 +382,48 @@ class _ComentariosDialogState extends State<ComentariosDialog> {
                   itemCount: widget.post.comentarios.length,
                   itemBuilder: (context, idx) {
                     final c = widget.post.comentarios[idx];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        child: Text(c.usuario.nombre.isNotEmpty ? c.usuario.nombre[0] : '?'),
-                      ),
-                      title: Text(c.usuario.nombre),
-                      subtitle: Text(c.contenido),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${c.fecha.day}/${c.fecha.month}/${c.fecha.year}',
-                            style: const TextStyle(fontSize: 11),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: AppColors.purpleAccent.withOpacity(0.7),
+                                child: Text(
+                                  c.usuario.nombre.isNotEmpty ? c.usuario.nombre[0] : '?',
+                                  style: TextStyle(color: AppColors.textColor),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  c.usuario.nombre,
+                                  style: AppTextStyles.cardContent,
+                                ),
+                              ),
+                              Text(
+                                '${c.fecha.day}/${c.fecha.month}/${c.fecha.year}',
+                                style: AppTextStyles.subtitle.copyWith(fontSize: 11, color: AppColors.hintColor),
+                              ),
+                              if (c.usuario.id == _currentUserId)
+                                IconButton(
+                                  icon: const Icon(Icons.delete, size: 20, color: AppColors.purplePrimary),
+                                  tooltip: 'Borrar',
+                                  onPressed: () => _borrarComentario(c.id),
+                                ),
+                            ],
                           ),
-                          if (c.usuario.id == _currentUserId)
-                            IconButton(
-                              icon: const Icon(Icons.delete, size: 20),
-                              tooltip: 'Borrar',
-                              onPressed: () => _borrarComentario(c.id),
+                          const SizedBox(height: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 2),
+                            child: Text(
+                              c.contenido,
+                              style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
                             ),
+                          ),
                         ],
                       ),
                     );
@@ -347,20 +435,40 @@ class _ComentariosDialogState extends State<ComentariosDialog> {
               controller: _controller,
               minLines: 1,
               maxLines: 3,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Agregar comentario',
-                border: OutlineInputBorder(),
+                labelStyle: AppTextStyles.subtitle.copyWith(color: AppColors.purpleAccent),
+                filled: true,
+                fillColor: AppColors.darkBg.withOpacity(0.85),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               enabled: !_loading,
+              style: AppTextStyles.cardContent.copyWith(color: AppColors.textColor),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
+        TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.hintColor,
+            textStyle: AppTextStyles.subtitle,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cerrar'),
+        ),
         ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.purplePrimary,
+            foregroundColor: AppColors.textColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            textStyle: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
+            elevation: 0,
+          ),
           onPressed: _loading ? null : _agregarComentario,
-          child: _loading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Comentar'),
+          child: _loading
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Comentar'),
         ),
       ],
     );

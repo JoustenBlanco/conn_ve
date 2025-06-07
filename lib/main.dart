@@ -1,4 +1,4 @@
-import 'package:conn_ve/pages/login_register_page.dart';
+import 'pages/login_register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'pages/home_page.dart';
@@ -43,30 +43,40 @@ class SessionRedirector extends StatefulWidget {
 
 class _SessionRedirectorState extends State<SessionRedirector> {
   late final StreamSubscription<AuthState> _authSubscription;
+  bool _navigating = false; // Para evitar múltiples navegaciones
 
   @override
   void initState() {
     super.initState();
-print("Estamos en el SessionRedirector");
+    print("Estamos en el SessionRedirector");
     // Escuchar cambios de sesión
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      if (_navigating) return;
       final session = data.session;
       print("Escuchando cambios de sesión: $session");
       if (session != null) {
         await Future.delayed(Duration(seconds: 1)); 
         print('Sesión activa, redirigiendo al home o crear perfil');
-        final hasProfile = await userHasProfile();
+        bool hasProfile = false;
+        try {
+          hasProfile = await userHasProfile();
+        } catch (e) {
+          print('Error en userHasProfile: $e');
+        }
         if (!mounted) return;
         if (hasProfile) {
           print('Ya había un perfil en authSubscription, redirigiendo al home');
+          _navigating = true;
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
         } else {
           print('No había un perfil en authSubscription, cerrando sesión y redirigiendo al login/registro');
           await Supabase.instance.client.auth.signOut();
+          _navigating = true;
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginRegisterPage()));
         }
       } else {
         print('No hay sesión activa en authSubscription, redirigiendo al login');
+        _navigating = true;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginRegisterPage()));
       }
     });
@@ -77,23 +87,39 @@ print("Estamos en el SessionRedirector");
     if (currentSession != null) {
       print('Ya había una sesión activa al inicio');
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final hasProfile = await userHasProfile();
+        if (_navigating) return;
+        bool hasProfile = false;
+        try {
+          hasProfile = await userHasProfile();
+        } catch (e) {
+          print('Error en userHasProfile: $e');
+        }
         if (!mounted) return;
         if (hasProfile) {
           print('Ya había un perfil, redirigiendo al home');
+          _navigating = true;
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
         } else {
           print('No había un perfil, cerrando sesión y redirigiendo al login/registro');
           await Supabase.instance.client.auth.signOut();
+          _navigating = true;
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginRegisterPage()));
         }
       });
     } else {
       print('No hay sesión activa en el currentSession, redirigiendo al login');
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_navigating) return;
+        _navigating = true;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginRegisterPage()));
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
   }
 
   @override

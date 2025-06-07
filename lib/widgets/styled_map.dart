@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../shared/styles/app_text_styles.dart';
+import '../shared/styles/app_colors.dart';
 // Importar el modelo de estación
 import '../services/estaciones_service.dart';
 
@@ -28,29 +29,35 @@ class StyledMap extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
+        backgroundColor: AppColors.darkCard.withOpacity(0.98),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
         ),
         title: Text(
           estacion.nombre,
-          style: AppTextStyles.title,
+          style: AppTextStyles.title.copyWith(color: AppColors.purplePrimary),
         ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Enchufe: ${estacion.tipoEnchufe ?? "N/A"}', style: AppTextStyles.cardContent),
-              Text('Tarifa: ${estacion.tarifa ?? "N/A"}', style: AppTextStyles.cardContent),
-              Text('Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}', style: AppTextStyles.cardContent),
-              Text('Disponible: ${estacion.disponible ? "Sí" : "No"}', style: AppTextStyles.cardContent),
+              Text('Enchufe: ${estacion.tipoEnchufe ?? "N/A"}',
+                  style: AppTextStyles.cardContent.copyWith(color: AppColors.purpleAccent)),
+              Text('Tarifa: ${estacion.tarifa ?? "N/A"}',
+                  style: AppTextStyles.cardContent.copyWith(color: AppColors.hintColor)),
+              Text('Potencia: ${estacion.potenciaKw != null ? "${estacion.potenciaKw} kW" : "N/A"}',
+                  style: AppTextStyles.cardContent.copyWith(color: AppColors.purpleAccent)),
+              Text('Disponible: ${estacion.disponible ? "Sí" : "No"}',
+                  style: AppTextStyles.cardContent.copyWith(
+                    color: estacion.disponible ? Colors.greenAccent : Colors.redAccent,
+                  )),
             ],
           ),
         ),
         actions: [
           TextButton(
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.secondary,
+              foregroundColor: AppColors.hintColor,
               textStyle: AppTextStyles.subtitle,
             ),
             onPressed: () => Navigator.of(context).pop(),

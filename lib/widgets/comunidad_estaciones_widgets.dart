@@ -66,32 +66,39 @@ class _EstacionesListState extends State<EstacionesList> {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_list, color: AppColors.purpleAccent),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButton<String>(
-                      value: filtro,
-                      dropdownColor: AppColors.darkCard,
-                      style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
-                      iconEnabledColor: AppColors.purpleAccent,
-                      borderRadius: BorderRadius.circular(18),
-                      isExpanded: true,
-                      items: filtros.map((f) => DropdownMenuItem(
-                        value: f,
-                        child: Text(f),
-                      )).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            filtro = val;
-                          });
-                        }
-                      },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.darkCard.withOpacity(0.92),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.filter_list, color: AppColors.purpleAccent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButton<String>(
+                        value: filtro,
+                        dropdownColor: AppColors.darkCard,
+                        style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
+                        iconEnabledColor: AppColors.purpleAccent,
+                        borderRadius: BorderRadius.circular(18),
+                        isExpanded: true,
+                        underline: const SizedBox(),
+                        items: filtros.map((f) => DropdownMenuItem(
+                          value: f,
+                          child: Text(f),
+                        )).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              filtro = val;
+                            });
+                          }
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             Padding(
@@ -99,10 +106,14 @@ class _EstacionesListState extends State<EstacionesList> {
               child: TextField(
                 decoration: InputDecoration(
                   hintText: 'Buscar estación por nombre',
+                  hintStyle: AppTextStyles.subtitle.copyWith(color: AppColors.hintColor),
                   prefixIcon: const Icon(Icons.search, color: AppColors.purpleAccent),
+                  filled: true,
+                  fillColor: AppColors.darkCard.withOpacity(0.92),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                 ),
+                style: AppTextStyles.cardContent.copyWith(color: AppColors.textColor),
                 onChanged: (val) => setState(() => _busqueda = val),
               ),
             ),
@@ -321,7 +332,12 @@ class _CalificarEstacionDialogState extends State<CalificarEstacionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Calificar "${widget.estacion.nombre}"'),
+      backgroundColor: AppColors.darkCard.withOpacity(0.98),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      title: Text(
+        'Calificar "${widget.estacion.nombre}"',
+        style: AppTextStyles.title.copyWith(color: AppColors.purplePrimary),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -334,23 +350,44 @@ class _CalificarEstacionDialogState extends State<CalificarEstacionDialog> {
               onPressed: _loading ? null : () => setState(() => _calificacion = i + 1),
             )),
           ),
+          const SizedBox(height: 10),
           TextField(
             controller: _comentarioCtrl,
             minLines: 1,
             maxLines: 3,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Comentario',
-              border: OutlineInputBorder(),
+              labelStyle: AppTextStyles.subtitle.copyWith(color: AppColors.purpleAccent),
+              filled: true,
+              fillColor: AppColors.darkBg.withOpacity(0.85),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             enabled: !_loading,
+            style: AppTextStyles.cardContent.copyWith(color: AppColors.textColor),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.hintColor,
+            textStyle: AppTextStyles.subtitle,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
         ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.purplePrimary,
+            foregroundColor: AppColors.textColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            textStyle: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
+            elevation: 0,
+          ),
           onPressed: _loading ? null : _guardar,
-          child: _loading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Guardar'),
+          child: _loading
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Guardar'),
         ),
       ],
     );
@@ -366,6 +403,8 @@ class VerComentariosDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      backgroundColor: AppColors.darkCard.withOpacity(0.98),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       child: Container(
         width: 500,
         height: 450,
@@ -375,22 +414,28 @@ class VerComentariosDialog extends StatelessWidget {
           children: [
             Text(
               estacion != null ? 'Reseñas de "${estacion!.nombre}"' : 'Reseñas',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: AppTextStyles.title.copyWith(color: AppColors.purplePrimary),
             ),
             const SizedBox(height: 10),
             Expanded(
               child: comentarios.isEmpty
-                  ? const Center(child: Text('No hay reseñas aún.'))
+                  ? Text('No hay reseñas aún.', style: AppTextStyles.subtitle.copyWith(color: AppColors.hintColor))
                   : Scrollbar(
                       thumbVisibility: true,
                       child: ListView.separated(
                         itemCount: comentarios.length,
-                        separatorBuilder: (_, __) => const Divider(height: 16),
+                        separatorBuilder: (_, __) => Divider(height: 16, color: AppColors.purpleAccent.withOpacity(0.18)),
                         itemBuilder: (context, idx) {
                           final c = comentarios[idx];
                           return ListTile(
-                            leading: CircleAvatar(child: Text(c.nombreUsuario != null && c.nombreUsuario!.isNotEmpty ? c.nombreUsuario![0] : '?')),
-                            title: Text(c.nombreUsuario ?? ''),
+                            leading: CircleAvatar(
+                              backgroundColor: AppColors.purpleAccent.withOpacity(0.7),
+                              child: Text(
+                                c.nombreUsuario != null && c.nombreUsuario!.isNotEmpty ? c.nombreUsuario![0] : '?',
+                                style: TextStyle(color: AppColors.textColor),
+                              ),
+                            ),
+                            title: Text(c.nombreUsuario ?? '', style: AppTextStyles.cardContent),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -398,11 +443,14 @@ class VerComentariosDialog extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   c.comentario,
-                                  style: const TextStyle(fontSize: 15),
+                                  style: AppTextStyles.subtitle.copyWith(color: AppColors.textColor),
                                 ),
                               ],
                             ),
-                            trailing: Text('${c.fecha.day}/${c.fecha.month}/${c.fecha.year}', style: const TextStyle(fontSize: 11)),
+                            trailing: Text(
+                              '${c.fecha.day}/${c.fecha.month}/${c.fecha.year}',
+                              style: AppTextStyles.subtitle.copyWith(fontSize: 11, color: AppColors.hintColor),
+                            ),
                             contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                           );
                         },
@@ -412,6 +460,10 @@ class VerComentariosDialog extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.hintColor,
+                  textStyle: AppTextStyles.subtitle,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Cerrar'),
               ),
