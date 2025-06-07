@@ -1362,6 +1362,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      style: const TextStyle(color: AppColors.textColor),
                       onChanged: (v) {
                         final val = double.tryParse(v);
                         if (val != null && val > 0)
@@ -1386,6 +1387,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      style: const TextStyle(color: AppColors.textColor),
                       onChanged: (v) {
                         final val = double.tryParse(v);
                         if (val != null && val > 0)
@@ -1410,6 +1412,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      style: const TextStyle(color: AppColors.textColor),
                       onChanged: (v) {
                         final val = double.tryParse(v);
                         if (val != null && val > 0)
@@ -1434,6 +1437,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      style: const TextStyle(color: AppColors.textColor),
                       onChanged: (v) {
                         final val = double.tryParse(v);
                         if (val != null && val > 0)
@@ -1458,6 +1462,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      style: const TextStyle(color: AppColors.textColor),
                       onChanged: (v) {
                         final val = double.tryParse(v);
                         if (val != null && val > 0)
@@ -1482,6 +1487,7 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      style: const TextStyle(color: AppColors.textColor),
                       onChanged: (v) {
                         final val = double.tryParse(v);
                         if (val != null && val >= 0)
