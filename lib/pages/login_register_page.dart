@@ -1,10 +1,11 @@
+import 'package:conn_ve/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'home_page.dart';
-import '../shared/styles/app_colors.dart';
-import '../shared/styles/app_text_styles.dart';
-import '../shared/styles/app_decorations.dart';
-import '../shared/styles/app_constants.dart';
+import 'package:conn_ve/pages/OTP_Verification_Page.dart';
+import 'package:conn_ve/shared/styles/app_colors.dart';
+import 'package:conn_ve/shared/styles/app_text_styles.dart';
+import 'package:conn_ve/shared/styles/app_decorations.dart';
+import 'package:conn_ve/shared/styles/app_constants.dart';
 
 class LoginRegisterPage extends StatefulWidget {
   const LoginRegisterPage({super.key});
@@ -103,9 +104,15 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
       passwordController.clear();
       nombreController.clear();
       confirmPasswordController.clear();
-      Navigator.pushReplacement(
+      // Proceso de OTP
+      sendOTP();
+
+      // Navegar a pantalla de verificación
+      Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(
+          builder: (_) => OtpVerificationPage(),
+        ),
       );
     } on AuthException catch (e) {
       // Errores específicos de autenticación
