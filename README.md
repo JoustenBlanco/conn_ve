@@ -60,16 +60,6 @@
 
 ---
 
-## 🗂️ Estructura del Proyecto
-
-lib/
-├── pages/ # Pantallas principales (mapa, comunidad, rutas, etc.)
-├── services/ # Lógica de conexión con Supabase, mapas, notificaciones
-├── shared/
-│ ├── images/ # Recursos gráficos e íconos (incluye el ícono de la app)
-│ └── styles/ # Temas, colores, y estilos compartidos
-└── widgets/ # Componentes reutilizables de UI
-
 ## 🚀 Instalación y Ejecución
 
 ```bash
