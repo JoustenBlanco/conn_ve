@@ -14,9 +14,6 @@ void main() async {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   // Pedir permiso en iOS (en Android normalmente se habilita por defecto)
   await messaging.requestPermission();
-  // Obtener token del dispositivo
-  String? token = await messaging.getToken();
-  print('FCM Token: $token');
 
   await Supabase.initialize(
     url: 'https://wwjvnuopafqmvsolrofm.supabase.co',

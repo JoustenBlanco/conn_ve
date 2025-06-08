@@ -6,7 +6,6 @@ import 'package:conn_ve/shared/styles/app_colors.dart';
 import 'package:conn_ve/shared/styles/app_text_styles.dart';
 import 'package:conn_ve/shared/styles/app_decorations.dart';
 import 'package:conn_ve/shared/styles/app_constants.dart';
-import 'package:conn_ve/pages/home_page.dart';
 
 class LoginRegisterPage extends StatefulWidget {
   const LoginRegisterPage({super.key});
@@ -91,14 +90,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
           password: password,
         );
         // Si ocurre un error, Supabase lanzará una excepción y saltará al catch.
-        final userId = res.user?.id;
-        if (userId != null) {
-          await Supabase.instance.client.from('usuarios').insert({
-            'id': userId,
-            'nombre': nombre,
-            'correo': email,
-          });
-        }
+        if (res.user == null) throw Exception('No se logro procesar el registro.');
+        registerUser(res.user!.id,nombre,email);
       }
       // Limpiar campos después de éxito
       emailController.clear();
@@ -112,7 +105,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => HomePage(),
+          builder: (_) => OtpVerificationPage(),
         ),
       );
     } on AuthException catch (e) {
