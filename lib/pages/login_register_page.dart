@@ -1,11 +1,12 @@
-import 'package:conn_ve/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:conn_ve/services/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:conn_ve/pages/OTP_Verification_Page.dart';
-import 'package:conn_ve/shared/styles/app_colors.dart';
+import 'package:conn_ve/services/notifications_service.dart';
 import 'package:conn_ve/shared/styles/app_text_styles.dart';
 import 'package:conn_ve/shared/styles/app_decorations.dart';
+import 'package:conn_ve/pages/OTP_Verification_Page.dart';
 import 'package:conn_ve/shared/styles/app_constants.dart';
+import 'package:conn_ve/shared/styles/app_colors.dart';
 
 class LoginRegisterPage extends StatefulWidget {
   const LoginRegisterPage({super.key});
@@ -80,6 +81,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
           email: email,
           password: password,
         );
+        // Cerrar sesión para obligar a usar el OTP
+        await Supabase.instance.client.auth.signOut();
         if (res.user == null) {
           throw Exception('Usuario o contraseña incorrectos.');
         }
@@ -98,14 +101,11 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
       passwordController.clear();
       nombreController.clear();
       confirmPasswordController.clear();
-      // Proceso de OTP
-      sendOTP();
-
       // Navegar a pantalla de verificación
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => OtpVerificationPage(),
+          builder: (_) => OtpVerificationPage(email: email, password: password,),
         ),
       );
     } on AuthException catch (e) {

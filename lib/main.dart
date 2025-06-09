@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:conn_ve/services/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,16 +10,20 @@ import 'package:conn_ve/pages/home_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp();
-  // Inicializar FCM
-  FirebaseMessaging messaging = FirebaseMessaging.instance;
-  // Pedir permiso en iOS (en Android normalmente se habilita por defecto)
-  await messaging.requestPermission();
-
   await Supabase.initialize(
     url: 'https://wwjvnuopafqmvsolrofm.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3anZudW9wYWZxbXZzb2xyb2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3NjczMjEsImV4cCI6MjA2MDM0MzMyMX0.v4CNGHBsa7sB_4FIMomytTYW-cVIEmsh-KIVbTC1Z1g',
   );
+
+  await Firebase.initializeApp();
+  // Inicializar FCM
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  // Escuchar cambios en el token de FCM
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    updateTokenFCM();
+  });
+  // Pedir permiso en iOS (en Android normalmente se habilita por defecto)
+  await messaging.requestPermission();
 
   runApp(const MyApp());
 }

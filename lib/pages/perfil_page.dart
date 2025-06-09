@@ -1,3 +1,4 @@
+import 'package:conn_ve/services/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../shared/styles/app_colors.dart';
@@ -44,6 +45,7 @@ class _PerfilPageState extends State<PerfilPage> {
   }
 
   Future<void> _logout() async {
+    deleteTokenFCM();
     await Supabase.instance.client.auth.signOut();
     _goToLogin();
   }
