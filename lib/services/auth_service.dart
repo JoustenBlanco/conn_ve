@@ -39,13 +39,11 @@ Future<bool> registerUser(String userId, String name, String email,) async {
   return json['success'] == true;
 }
 
-Future<bool> verifyOTP(String otp) async {
-  final session = Supabase.instance.client.auth.currentSession;
-  if (session == null) throw Exception('No existe una session.');
+Future<bool> verifyOTP(String otp, email) async {
   final res = await Supabase.instance.client.functions.invoke(
     'verify-otp',
     body: {
-      'user_id': session.user.id,
+      'email': email,
       'otp': otp,
     },
   );
@@ -57,11 +55,8 @@ Future<bool> verifyOTP(String otp) async {
   return json['success'] == true;
 }
 
-Future<void> sendOTP() async {
-  final session = Supabase.instance.client.auth.currentSession;
-  if (session == null) throw Exception('No existe una session.');
+Future<void> sendOTP(email) async {
   await Supabase.instance.client.functions.invoke('send-otp', body: {
-    'email': session.user.email,
-    'user_id': session.user.id,
+    'email': email,
   });
 }

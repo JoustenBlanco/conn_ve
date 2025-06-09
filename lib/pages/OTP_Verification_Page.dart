@@ -1,12 +1,16 @@
-import 'package:conn_ve/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:conn_ve/services/notifications_service.dart';
+import 'package:conn_ve/shared/styles/app_text_styles.dart';
+import 'package:conn_ve/shared/styles/app_decorations.dart';
+import 'package:conn_ve/shared/styles/app_colors.dart';
+import 'package:conn_ve/services/auth_service.dart';
 import 'package:conn_ve/pages/home_page.dart';
-import '../shared/styles/app_colors.dart';
-import '../shared/styles/app_text_styles.dart';
-import '../shared/styles/app_decorations.dart';
 
 class OtpVerificationPage extends StatefulWidget {
-  const OtpVerificationPage({Key? key}) : super(key: key);
+  final email;
+  final password;
+  const OtpVerificationPage({Key? key, required this.email, required this.password}) : super(key: key);
 
   @override
   State<OtpVerificationPage> createState() => _OtpVerificationPageState();
@@ -22,8 +26,15 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
     setState(() => loading = true);
 
-    if (await verifyOTP(enteredOtp)) {
+    if (await verifyOTP(enteredOtp, widget.email)) {
       if (!mounted) return;
+      // Login
+      final res = await Supabase.instance.client.auth.signInWithPassword(
+        email: widget.email,
+        password: widget.password,
+      );
+      // Se actualiza el token de FCM para notificaciones
+      updateTokenFCM();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
@@ -40,7 +51,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   Future<void> resend() async {
     setState(() => resending = true);
     try {
-      await sendOTP();
+      await sendOTP(widget.email);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Código reenviado al correo.')),
@@ -48,11 +59,18 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al reenviar: ${e.toString()}')),
+        SnackBar(content: Text('Error al reenviar código.')),
       );
     } finally {
       setState(() => resending = false);
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Se envía el OTP al correo
+    sendOTP(widget.email);
   }
 
   @override

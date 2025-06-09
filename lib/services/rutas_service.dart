@@ -81,7 +81,7 @@ class RutasService {
       'autonomia_km': autonomiaKm,
       'preferencia_carga': preferenciaCarga,
       'marcas_compatibles': marcasCompatibles,
-      'fecha_programada': fechaProgramada.toIso8601String(),
+      'fecha_programada': fechaProgramada.toUtc().toIso8601String(),
       'origen_latitud': origenLatitud,
       'origen_longitud': origenLongitud,
       'destino_latitud': destinoLatitud,

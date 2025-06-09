@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:conn_ve/services/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,6 +13,10 @@ void main() async {
   await Firebase.initializeApp();
   // Inicializar FCM
   FirebaseMessaging messaging = FirebaseMessaging.instance;
+  // Escuchar cambios en el token de FCM
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    updateTokenFCM();
+  });
   // Pedir permiso en iOS (en Android normalmente se habilita por defecto)
   await messaging.requestPermission();
 
