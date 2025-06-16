@@ -25,7 +25,7 @@ class ComunidadPage extends StatelessWidget {
             centerTitle: true,
             shadowColor: AppColors.purplePrimary.withOpacity(0.12),
             iconTheme: const IconThemeData(color: AppColors.purpleAccent),
-            automaticallyImplyLeading: false, // <-- elimina el botón de ir atrás
+            automaticallyImplyLeading: false,
             bottom: TabBar(
               indicatorColor: AppColors.purplePrimary,
               indicatorWeight: 4,
@@ -43,7 +43,6 @@ class ComunidadPage extends StatelessWidget {
           body: Container(
             width: double.infinity,
             height: double.infinity,
-            // El gradiente ya está aplicado en el contenedor principal
             child: TabBarView(
               children: [
                 // --- FEED FORO ---

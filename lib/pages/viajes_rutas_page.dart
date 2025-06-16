@@ -42,7 +42,6 @@ class _ViajesRutasPageState extends State<ViajesRutasPage> {
 
   Set<Polyline> _polylines = {};
 
-  // Reemplaza con tu propia clave de API de Google Directions
   static const String _googleApiKey = 'AIzaSyB9wb0w7fj8PPxWUpa_ptP4IrQU9Hgcp-A';
 
   // Copia el estilo de mapa de mapa_page
